@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.daverix.snakedb.core.android">
+
+    <application android:allowBackup="true" />
+</manifest>
