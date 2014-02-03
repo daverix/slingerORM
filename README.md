@@ -30,10 +30,10 @@ IMapping mapping = mappingFetcher.getMapping(ExampleEntity.class);
 String sql = mapping.getCreateTableSql();
 ```
 
-If you are developing on Android, the simplest way to interact with your database is to use the SQLStorageFactory built specifically for Android and it's SQLiteDatabase class. It uses the MappingFetcher internally.
+If you are developing on Android, there is a class SqliteStorage which will help you with your database interactions. Pass the mapper above to the constructor together with a SQLiteDatabase and call initStorage to create the database table with data from the mapper.
 
 ```
-IStorage<ExampleEntity> storage = SQliteStorageFactory.initStorage(db, ExampleEntity.class);
+IStorage<ExampleEntity> storage = new SQLiteStorage<ComplexEntity>(db, mapper);
 storage.initStorage();
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
