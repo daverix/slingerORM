@@ -113,7 +113,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
           bw.append("        values.put(\"").append(fieldName).append("\", item.").append(getter).append(");\n");
         }
 
-        bw.append("}\n");
+          bw.append("    }\n\n");
     }
 
     protected void appendMap(BufferedWriter bw, Element entity, List<Element> methods, String entityName, List<Element> validFields) throws IOException {
