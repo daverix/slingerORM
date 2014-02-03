@@ -1,6 +1,5 @@
 package net.daverix.slingerorm.sample;
 
-import android.provider.BaseColumns;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.FieldName;
 import net.daverix.slingerorm.annotation.GetField;
@@ -11,7 +10,7 @@ import net.daverix.slingerorm.annotation.SetField;
  */
 @DatabaseEntity
 public abstract class AbstractComplexEntity {
-    @FieldName(BaseColumns._ID) private long _id;
+    @FieldName("_Id") private long _id;
 
     @GetField("_id")
     public long getId() {
