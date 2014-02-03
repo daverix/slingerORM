@@ -1,14 +1,14 @@
-package net.daverix.snakedb.android;
+package net.daverix.snakedb.android.mapping;
 
 import android.database.Cursor;
 
 import net.daverix.snakedb.exception.FieldNotFoundException;
 import net.daverix.snakedb.mapping.IFetchableValues;
 
-public class CursorValues implements IFetchableValues {
+public class CursorWrapper implements IFetchableValues {
     private final Cursor mCursor;
 
-    public CursorValues(Cursor cursor) {
+    public CursorWrapper(Cursor cursor) {
         mCursor = cursor;
     }
 

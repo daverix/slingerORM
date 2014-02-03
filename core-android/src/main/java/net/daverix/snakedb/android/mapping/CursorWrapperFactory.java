@@ -1,18 +1,17 @@
-package net.daverix.snakedb.android;
+package net.daverix.snakedb.android.mapping;
 import android.database.Cursor;
 
-import net.daverix.snakedb.mapping.IFetchableValuesFactory;
 import net.daverix.snakedb.mapping.IFetchableValues;
 
-public class CursorValuesFactory implements IFetchableValuesFactory<Cursor> {
+public class CursorWrapperFactory implements IFetchableValuesFactory {
 
-    public CursorValuesFactory() {
+    public CursorWrapperFactory() {
     }
 
     @Override
     public IFetchableValues create(Cursor cursor) {
         if(cursor == null) throw new IllegalArgumentException("cursor is null");
 
-        return new CursorValues(cursor);
+        return new CursorWrapper(cursor);
     }
 }

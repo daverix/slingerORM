@@ -1,16 +1,17 @@
 package net.daverix.snakedb.android;
 
-import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
-import net.daverix.snakedb.exception.InitStorageException;
-import net.daverix.snakedb.mapping.IFetchableValuesFactory;
-import net.daverix.snakedb.mapping.IRetrievableData;
-import net.daverix.snakedb.mapping.IRetrievableDataFactory;
 import net.daverix.snakedb.IStorage;
+import net.daverix.snakedb.android.mapping.ContentValuesWrapperFactory;
+import net.daverix.snakedb.android.mapping.CursorWrapperFactory;
+import net.daverix.snakedb.android.mapping.IContentValuesWrapper;
+import net.daverix.snakedb.android.mapping.IContentValuesWrapperFactory;
+import net.daverix.snakedb.android.mapping.IFetchableValuesFactory;
 import net.daverix.snakedb.exception.FieldNotFoundException;
+import net.daverix.snakedb.exception.InitStorageException;
 import net.daverix.snakedb.mapping.IMapping;
 
 import java.util.ArrayList;
@@ -23,12 +24,12 @@ import java.util.List;
 public class SQLiteStorage<T> implements IStorage<T> {
     private final SQLiteDatabase mDb;
     private final IMapping<T> mMapping;
-    private final IRetrievableDataFactory<ContentValues> mInsertableValuesFactory;
-    private final IFetchableValuesFactory<Cursor> mFetchableValuesFactory;
+    private final IContentValuesWrapperFactory mInsertableValuesFactory;
+    private final IFetchableValuesFactory mFetchableValuesFactory;
 
     public SQLiteStorage(SQLiteDatabase db, IMapping<T> mapping,
-                         IRetrievableDataFactory<ContentValues> insertableValuesFactory,
-                         IFetchableValuesFactory<Cursor> fetchableValuesFactory) {
+                         IContentValuesWrapperFactory insertableValuesFactory,
+                         IFetchableValuesFactory fetchableValuesFactory) {
         if(db == null) throw new IllegalArgumentException("db is null");
         if(mapping == null) throw new IllegalArgumentException("mapping is null");
         if(insertableValuesFactory == null) throw new IllegalArgumentException("insertableValuesFactory is null");
@@ -46,8 +47,8 @@ public class SQLiteStorage<T> implements IStorage<T> {
 
         mDb = db;
         mMapping = mapping;
-        mInsertableValuesFactory = new DatabaseValuesFactory();
-        mFetchableValuesFactory = new CursorValuesFactory();
+        mInsertableValuesFactory = new ContentValuesWrapperFactory();
+        mFetchableValuesFactory = new CursorWrapperFactory();
     }
 
     @Override
@@ -63,7 +64,7 @@ public class SQLiteStorage<T> implements IStorage<T> {
     public void insert(T item) throws FieldNotFoundException {
         if(item == null) throw new IllegalArgumentException("item is null");
 
-        IRetrievableData<ContentValues> values = mInsertableValuesFactory.create();
+        IContentValuesWrapper values = mInsertableValuesFactory.create();
         mMapping.mapValues(item, values);
 
         mDb.insert(mMapping.getTableName(), null, values.getData());
@@ -73,7 +74,7 @@ public class SQLiteStorage<T> implements IStorage<T> {
     public void update(T item) throws FieldNotFoundException {
         if(item == null) throw new IllegalArgumentException("item is null");
 
-        IRetrievableData<ContentValues> values = mInsertableValuesFactory.create();
+        IContentValuesWrapper values = mInsertableValuesFactory.create();
         mMapping.mapValues(item, values);
 
         update(item, mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
@@ -84,7 +85,7 @@ public class SQLiteStorage<T> implements IStorage<T> {
         if(selection == null) throw new IllegalArgumentException("selection is null");
         if(selectionArgs == null) throw new IllegalArgumentException("selectionArgs is null");
 
-        IRetrievableData<ContentValues> values = mInsertableValuesFactory.create();
+        IContentValuesWrapper values = mInsertableValuesFactory.create();
         mMapping.mapValues(item, values);
 
         mDb.update(mMapping.getTableName(), values.getData(),selection, selectionArgs);

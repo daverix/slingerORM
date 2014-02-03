@@ -1,7 +1,7 @@
 package net.daverix.snakedb;
 
-import net.daverix.snakedb.exception.FieldNotFoundException;
 import net.daverix.snakedb.exception.InitStorageException;
+import net.daverix.snakedb.exception.FieldNotFoundException;
 
 import java.util.List;
 

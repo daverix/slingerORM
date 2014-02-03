@@ -1,10 +1,8 @@
-package net.daverix.snakedb.android;
+package net.daverix.snakedb.android.mapping;
 
 import android.content.ContentValues;
 
-import net.daverix.snakedb.mapping.IRetrievableData;
-
-public class DatabaseValues implements IRetrievableData<ContentValues> {
+public class ContentValuesWrapper implements IContentValuesWrapper {
     private final ContentValues mValues = new ContentValues();
 
     @Override
