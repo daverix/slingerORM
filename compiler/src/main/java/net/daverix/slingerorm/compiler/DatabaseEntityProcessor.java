@@ -154,11 +154,14 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             .append("    }\n");
     }
 
-    protected String createTableSql(Element entity, String tableName, List<Element> validFields) {
+    protected String createTableSql(TypeElement entity, String tableName, List<Element> validFields) {
         if(validFields.size() == 0)
             throw new IllegalArgumentException("no fields found in " + entity.getSimpleName());
 
         StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName).append("(");
+
+        DatabaseEntity entityAnnotation = entity.getAnnotation(DatabaseEntity.class);
+        String primaryKey = entityAnnotation.primaryKey();
 
         for(int i=0;i<validFields.size();i++) {
             final Element field = validFields.get(i);
@@ -166,7 +169,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             final String fieldType = getDatabaseType(field);
             builder.append(fieldName).append(" ").append(fieldType);
             PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
-            if(annotation != null) {
+            if( ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(fieldName) ) || annotation != null) {
                 builder.append(" NOT NULL PRIMARY KEY");
             }
 
