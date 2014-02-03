@@ -15,12 +15,17 @@ public class SampleMapping implements IMapping<Sample> {
         if(values == null) throw new IllegalArgumentException("values is null");
 
         values.put("Id", item.Id);
+        values.put("BigNumber", item.BigNumber.doubleValue());
+        values.put("Date", item.Date.getTime());
     }
 
     @Override
     public Sample map(IFetchableValues values) throws FieldNotFoundException {
         Sample sample = new Sample();
         sample.Id = values.getString("Id");
+        sample.BigNumber = values.getBigDecimal("BigNumber");
+        sample.Date = values.getDate("Date");
+
         return sample;
     }
 

@@ -2,6 +2,9 @@ package net.daverix.slingerorm.android.mapping;
 
 import android.content.ContentValues;
 
+import java.math.BigDecimal;
+import java.util.Date;
+
 public class ContentValuesWrapper implements IContentValuesWrapper {
     private final ContentValues mValues = new ContentValues();
 
@@ -38,6 +41,16 @@ public class ContentValuesWrapper implements IContentValuesWrapper {
     @Override
     public void put(String fieldName, long value) {
         mValues.put(fieldName, value);
+    }
+
+    @Override
+    public void put(String fieldName, Date value) {
+        mValues.put(fieldName, value != null ? value.getTime() : 0);
+    }
+
+    @Override
+    public void put(String fieldName, BigDecimal value) {
+        mValues.put(fieldName, value != null ? value.doubleValue() : 0);
     }
 
     @Override

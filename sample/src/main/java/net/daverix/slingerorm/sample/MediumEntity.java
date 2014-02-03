@@ -3,6 +3,9 @@ package net.daverix.slingerorm.sample;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
+import java.math.BigDecimal;
+import java.util.Date;
+
 /**
  * Created by daverix on 2/1/14.
  */
@@ -11,7 +14,8 @@ public class MediumEntity {
     @PrimaryKey
     private String Id;
     private String Name;
-    private long Size;
+    private Date Created;
+    private BigDecimal Big;
 
     public String getId() {
         return Id;
@@ -29,11 +33,19 @@ public class MediumEntity {
         Name = name;
     }
 
-    public long getSize() {
-        return Size;
+    public Date getCreated() {
+        return Created;
     }
 
-    public void setSize(long size) {
-        Size = size;
+    public void setCreated(Date created) {
+        Created = created;
+    }
+
+    public BigDecimal getBig() {
+        return Big;
+    }
+
+    public void setBig(BigDecimal big) {
+        Big = big;
     }
 }
