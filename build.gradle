@@ -14,7 +14,19 @@ buildscript {
 }
 
 allprojects {
+    group = 'net.daverix.slingerorm'
+    version = '0.1'
+	
     repositories {
         mavenCentral()
+    }
+	
+	apply plugin: 'maven'
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
+            }
+        }
     }
 }
