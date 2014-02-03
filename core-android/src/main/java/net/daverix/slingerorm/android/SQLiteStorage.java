@@ -86,29 +86,32 @@ public class SQLiteStorage<T> implements IStorage<T> {
     }
 
     @Override
-    public void update(T item) throws FieldNotFoundException {
+    public int update(T item) throws FieldNotFoundException {
         if(item == null) throw new IllegalArgumentException("item is null");
 
         IContentValuesWrapper values = mInsertableValuesFactory.create();
         mMapping.mapValues(item, values);
 
-        update(item, mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
+        return update(item, mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
     }
 
     @Override
-    public void update(List<T> items) throws FieldNotFoundException {
+    public int update(List<T> items) throws FieldNotFoundException {
+        if(items == null) throw new IllegalArgumentException("items is null");
+
         mDb.beginTransaction();
         try {
             for(T item : items) {
                 update(item);
             }
             mDb.setTransactionSuccessful();
+            return items.size();
         } finally {
             mDb.endTransaction();
         }
     }
 
-    private void update(T item, String selection, String[] selectionArgs) throws FieldNotFoundException {
+    private int update(T item, String selection, String[] selectionArgs) throws FieldNotFoundException {
         if(item == null) throw new IllegalArgumentException("item is null");
         if(selection == null) throw new IllegalArgumentException("selection is null");
         if(selectionArgs == null) throw new IllegalArgumentException("selectionArgs is null");
@@ -116,41 +119,44 @@ public class SQLiteStorage<T> implements IStorage<T> {
         IContentValuesWrapper values = mInsertableValuesFactory.create();
         mMapping.mapValues(item, values);
 
-        mDb.update(mMapping.getTableName(), values.getData(),selection, selectionArgs);
+        return mDb.update(mMapping.getTableName(), values.getData(),selection, selectionArgs);
     }
 
     @Override
-    public void delete(String id) {
+    public int delete(String id) {
         if(id == null) throw new IllegalArgumentException("item is null");
 
-        delete(mMapping.getIdFieldName() + "=?", new String[]{id});
+        return delete(mMapping.getIdFieldName() + "=?", new String[]{id});
     }
 
     @Override
-    public void delete(T item) {
+    public int delete(T item) {
         if(item == null) throw new IllegalArgumentException("item is null");
 
-        delete(mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
+        return delete(mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
     }
 
     @Override
-    public void delete(List<String> ids) throws FieldNotFoundException {
+    public int delete(List<String> ids) throws FieldNotFoundException {
+        if(ids == null) throw new IllegalArgumentException("ids is null");
+
         mDb.beginTransaction();
         try {
             for(String id : ids) {
                 delete(id);
             }
             mDb.setTransactionSuccessful();
+            return ids.size();
         } finally {
             mDb.endTransaction();
         }
     }
 
-    private void delete(String selection, String[] selectionArgs) {
+    private int delete(String selection, String[] selectionArgs) {
         if(selection == null) throw new IllegalArgumentException("selection is null");
         if(selectionArgs == null) throw new IllegalArgumentException("selectionArgs is null");
 
-        mDb.delete(mMapping.getTableName(), selection, selectionArgs);
+        return mDb.delete(mMapping.getTableName(), selection, selectionArgs);
     }
 
     @Override

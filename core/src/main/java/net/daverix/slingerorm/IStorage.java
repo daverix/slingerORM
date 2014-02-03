@@ -14,12 +14,12 @@ public interface IStorage<T> {
     void insert(T item) throws FieldNotFoundException;
     void insert(List<T> items) throws FieldNotFoundException;
 
-    void update(T item) throws FieldNotFoundException;
-    void update(List<T> items) throws FieldNotFoundException;
+    int update(T item) throws FieldNotFoundException;
+    int update(List<T> items) throws FieldNotFoundException;
 
-    void delete(String item);
-    void delete(T item);
-    void delete(List<String> ids) throws FieldNotFoundException;
+    int delete(String item);
+    int delete(T item);
+    int delete(List<String> ids) throws FieldNotFoundException;
 
     T get(String id) throws FieldNotFoundException;
 
