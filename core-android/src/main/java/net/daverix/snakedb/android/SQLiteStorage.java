@@ -40,6 +40,16 @@ public class SQLiteStorage<T> implements IStorage<T> {
         mFetchableValuesFactory = fetchableValuesFactory;
     }
 
+    public SQLiteStorage(SQLiteDatabase db, IMapping<T> mapping) {
+        if(db == null) throw new IllegalArgumentException("db is null");
+        if(mapping == null) throw new IllegalArgumentException("mapping is null");
+
+        mDb = db;
+        mMapping = mapping;
+        mInsertableValuesFactory = new DatabaseValuesFactory();
+        mFetchableValuesFactory = new CursorValuesFactory();
+    }
+
     @Override
     public void initStorage() throws InitStorageException {
         try {

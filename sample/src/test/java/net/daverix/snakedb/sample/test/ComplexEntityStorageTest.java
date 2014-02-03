@@ -1,14 +1,8 @@
 package net.daverix.snakedb.sample.test;
 
-import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.snakedb.IStorage;
-import net.daverix.snakedb.android.CursorValuesFactory;
-import net.daverix.snakedb.android.DatabaseValuesFactory;
-import net.daverix.snakedb.mapping.IFetchableValuesFactory;
-import net.daverix.snakedb.mapping.IRetrievableDataFactory;
 import net.daverix.snakedb.android.SQLiteStorage;
 import net.daverix.snakedb.mapping.IMapping;
 import net.daverix.snakedb.mapping.IMappingFetcher;
@@ -57,12 +51,7 @@ public class ComplexEntityStorageTest {
         mappingFetcher.initialize();
 
         IMapping<ComplexEntity> mapping = mappingFetcher.getMapping(ComplexEntity.class);
-
-        IRetrievableDataFactory<ContentValues> retrievableDataFactory = new DatabaseValuesFactory();
-
-        IFetchableValuesFactory<Cursor> fetchableValuesFactory = new CursorValuesFactory();
-
-        mStorage = new SQLiteStorage<ComplexEntity>(db, mapping, retrievableDataFactory, fetchableValuesFactory);
+        mStorage = new SQLiteStorage<ComplexEntity>(db, mapping);
         mStorage.initStorage();
     }
 
