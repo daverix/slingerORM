@@ -38,7 +38,7 @@ public class ComplexEntityStorageTest {
         final ComplexEntity actual = mStorage.get(String.valueOf(expectedId));
 
         assertThat(actual.getId(), is(equalTo(expectedId)));
-        assertThat(actual.getName(), is(equalTo(expectedName)));
+        assertThat(actual.getEntityName(), is(equalTo(expectedName)));
         assertThat(actual.getValue(), is(equalTo(expectedValue)));
     }
 
@@ -58,7 +58,7 @@ public class ComplexEntityStorageTest {
     private ComplexEntity createEntity(long id, String name, double value) {
         ComplexEntity entity =new ComplexEntity();
         entity.setId(id);
-        entity.setName(name);
+        entity.setEntityName(name);
         entity.setValue(value);
         return entity;
     }

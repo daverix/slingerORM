@@ -404,10 +404,9 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     protected Element findMethodByFieldNameOnly(List<? extends Element> elements, String fieldName, String prefix) {
         for(Element element : elements) {
             if(element.getKind() == ElementKind.METHOD) {
-                String lastPart = fieldName.toLowerCase();
-                String firstLetter = lastPart.substring(0, 1).toUpperCase();
-                String methodName = prefix + firstLetter + lastPart.substring(1);
-
+                String firstLetter = fieldName.substring(0, 1).toUpperCase();
+                String methodName = prefix + firstLetter + fieldName.substring(1);
+                
                 if(methodName.equals(element.getSimpleName().toString()))
                     return element;
             }

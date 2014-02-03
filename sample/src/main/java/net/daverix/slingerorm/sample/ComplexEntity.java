@@ -14,12 +14,12 @@ public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("value") private double _value;
 
     @GetField("_name")
-    public String getName() {
+    public String getEntityName() {
         return _name;
     }
 
     @SetField("_name")
-    public void setName(String name) {
+    public void setEntityName(String name) {
         _name = name;
     }
 
