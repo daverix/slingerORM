@@ -3,7 +3,7 @@ import android.database.Cursor;
 
 import net.daverix.snakedb.mapping.IFetchableValues;
 
-public class CursorWrapperFactory implements IFetchableValuesFactory {
+public class CursorWrapperFactory implements ICursorWrapperFactory {
 
     public CursorWrapperFactory() {
     }

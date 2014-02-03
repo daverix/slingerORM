@@ -4,6 +4,6 @@ import android.database.Cursor;
 
 import net.daverix.snakedb.mapping.IFetchableValues;
 
-public interface IFetchableValuesFactory {
+public interface ICursorWrapperFactory {
     public IFetchableValues create(Cursor cursor);
 }

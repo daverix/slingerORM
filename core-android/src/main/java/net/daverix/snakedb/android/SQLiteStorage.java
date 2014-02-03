@@ -9,7 +9,7 @@ import net.daverix.snakedb.android.mapping.ContentValuesWrapperFactory;
 import net.daverix.snakedb.android.mapping.CursorWrapperFactory;
 import net.daverix.snakedb.android.mapping.IContentValuesWrapper;
 import net.daverix.snakedb.android.mapping.IContentValuesWrapperFactory;
-import net.daverix.snakedb.android.mapping.IFetchableValuesFactory;
+import net.daverix.snakedb.android.mapping.ICursorWrapperFactory;
 import net.daverix.snakedb.exception.FieldNotFoundException;
 import net.daverix.snakedb.exception.InitStorageException;
 import net.daverix.snakedb.mapping.IMapping;
@@ -25,11 +25,11 @@ public class SQLiteStorage<T> implements IStorage<T> {
     private final SQLiteDatabase mDb;
     private final IMapping<T> mMapping;
     private final IContentValuesWrapperFactory mInsertableValuesFactory;
-    private final IFetchableValuesFactory mFetchableValuesFactory;
+    private final ICursorWrapperFactory mFetchableValuesFactory;
 
     public SQLiteStorage(SQLiteDatabase db, IMapping<T> mapping,
                          IContentValuesWrapperFactory insertableValuesFactory,
-                         IFetchableValuesFactory fetchableValuesFactory) {
+                         ICursorWrapperFactory fetchableValuesFactory) {
         if(db == null) throw new IllegalArgumentException("db is null");
         if(mapping == null) throw new IllegalArgumentException("mapping is null");
         if(insertableValuesFactory == null) throw new IllegalArgumentException("insertableValuesFactory is null");
