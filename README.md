@@ -19,6 +19,37 @@ public class ExampleEntity {
 ```
 The DatabaseEntityProcessor will look at all the fields of the class and use the name of the field as a column name in the database table. If you annotate a field with @FieldName("custom name") you can change the name for the column in the database. By default it will use getters and setters starting with set/get and then the field name. This can be changed by annotating your get method with @GetField("fieldName") and your set method with @SetField("fieldName"). If no getters and setters are found and the fields are public, it will use the fields directly. You must always set what field is the primary key. Currently Only a single field is supported for primary key.
 
+```
+@DatabaseEntity
+public class ExampleEntity {
+  @PrimaryKey @FieldName("_id")
+  private String mId;
+  
+  @FieldName("name")
+  private String mName;
+  
+  @SetField("mId")
+  public void setId(String id) {
+    mId = id;
+  }
+  
+  @GetField("mId")
+  public String getId() {
+    return mId;
+  }
+  
+  @SetField("mName")
+  public void setName(String name) {
+    mName = name;
+  }
+  
+  @GetField("mName")
+  public void getName() {
+    return mName;
+  }
+}
+```
+
 When using the mapper you will not call the generated classes directly. The MappingFetcher is used for that. Register your entities and then initialize the MappingFetcher. After a call to initialize get the mapping for a specific entity by calling getMapping(mappingClass):
 
 ```
