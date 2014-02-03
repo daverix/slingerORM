@@ -21,6 +21,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -211,36 +212,41 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
 
     protected List<Element> getValidMethods(TypeElement entity) {
         List<Element> methods = new ArrayList<Element>();
+        Set<String> fieldNames = new HashSet<String>();
         addElements(methods, entity, new Verifier<Element>() {
             @Override
             public boolean verify(Element item) {
                 return item.getKind() == ElementKind.METHOD && isAccessable(item);
             }
-        });
+        }, fieldNames);
         return methods;
     }
-     protected List<Element> getValidFields(TypeElement entity) {
+
+    protected List<Element> getValidFields(TypeElement entity) {
         List<Element> fields = new ArrayList<Element>();
+        Set<String> fieldNames = new HashSet<String>();
         addElements(fields, entity, new Verifier<Element>() {
             @Override
             public boolean verify(Element item) {
                 return item.getKind() == ElementKind.FIELD && isDatabaseField(item);
             }
-        });
+        }, fieldNames);
         return fields;
     }
 
-    protected void addElements(List<Element> fields, TypeElement entity, Verifier<Element> verifier) {
+    protected void addElements(List<Element> fields, TypeElement entity, Verifier<Element> verifier, Set<String> names) {
         for(Element element: entity.getEnclosedElements()) {
-            if(verifier.verify(element)) {
+            String name = element.getSimpleName().toString();
+            if(verifier.verify(element) && !names.contains(name)) {
                 fields.add(element);
+                names.add(name);
             }
         }
 
         TypeMirror parentMirror = entity.getSuperclass();
         if(parentMirror.getKind() == TypeKind.DECLARED) {
             DeclaredType declaredType = (DeclaredType) parentMirror;
-            addElements(fields, (TypeElement) declaredType.asElement(), verifier);
+            addElements(fields, (TypeElement) declaredType.asElement(), verifier, names);
         }
     }
 
