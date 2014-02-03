@@ -71,6 +71,21 @@ public class SQLiteStorage<T> implements IStorage<T> {
     }
 
     @Override
+    public void insert(List<T> items) throws FieldNotFoundException {
+        if(items == null) throw new IllegalArgumentException("items is null");
+
+        mDb.beginTransaction();
+        try {
+            for(T item : items) {
+                insert(item);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }
+    }
+
+    @Override
     public void update(T item) throws FieldNotFoundException {
         if(item == null) throw new IllegalArgumentException("item is null");
 
@@ -78,6 +93,19 @@ public class SQLiteStorage<T> implements IStorage<T> {
         mMapping.mapValues(item, values);
 
         update(item, mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
+    }
+
+    @Override
+    public void update(List<T> items) throws FieldNotFoundException {
+        mDb.beginTransaction();
+        try {
+            for(T item : items) {
+                update(item);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }
     }
 
     private void update(T item, String selection, String[] selectionArgs) throws FieldNotFoundException {
@@ -92,10 +120,30 @@ public class SQLiteStorage<T> implements IStorage<T> {
     }
 
     @Override
+    public void delete(String id) {
+        if(id == null) throw new IllegalArgumentException("item is null");
+
+        delete(mMapping.getIdFieldName() + "=?", new String[]{id});
+    }
+
+    @Override
     public void delete(T item) {
         if(item == null) throw new IllegalArgumentException("item is null");
 
         delete(mMapping.getIdFieldName() + "=?", new String[]{mMapping.getId(item)});
+    }
+
+    @Override
+    public void delete(List<String> ids) throws FieldNotFoundException {
+        mDb.beginTransaction();
+        try {
+            for(String id : ids) {
+                delete(id);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }
     }
 
     private void delete(String selection, String[] selectionArgs) {
