@@ -391,7 +391,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         if(method != null)
             return method.getSimpleName() + "()";
 
-        method = findMethodByFieldNameOnly(methods, field.getSimpleName().toString(), "get");
+        boolean isBoolean = field.asType().getKind() == TypeKind.BOOLEAN;
+        method = findMethodByFieldNameOnly(methods, field.getSimpleName().toString(), isBoolean ? "is" : "get");
         if(method != null)
             return method.getSimpleName() + "()";
 
@@ -406,7 +407,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             if(element.getKind() == ElementKind.METHOD) {
                 String firstLetter = fieldName.substring(0, 1).toUpperCase();
                 String methodName = prefix + firstLetter + fieldName.substring(1);
-                
+
                 if(methodName.equals(element.getSimpleName().toString()))
                     return element;
             }

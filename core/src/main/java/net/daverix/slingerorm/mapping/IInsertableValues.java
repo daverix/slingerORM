@@ -14,6 +14,7 @@ public interface IInsertableValues {
     public void put(String fieldName, float value);
 
     public void put(String fieldName, int value);
+    public void put(String fieldName, boolean value);
     public void put(String fieldName, short value);
     public void put(String fieldName, long value);
     public void put(String fieldName, Date value);

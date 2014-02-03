@@ -12,6 +12,7 @@ import net.daverix.slingerorm.annotation.SetField;
 public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("name") private String _name;
     @FieldName("value") private double _value;
+    @FieldName("isComplex") private boolean _complex;
 
     @GetField("_name")
     public String getEntityName() {
@@ -31,5 +32,15 @@ public class ComplexEntity extends AbstractComplexEntity {
     @SetField("_value")
     public void setValue(double value) {
         _value = value;
+    }
+
+    @SetField("_complex")
+    public void setComplex(boolean complex) {
+        _complex = complex;
+    }
+
+    @GetField("_complex")
+    public boolean isComplex() {
+        return _complex;
     }
 }

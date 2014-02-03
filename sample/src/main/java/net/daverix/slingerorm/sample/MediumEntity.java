@@ -16,6 +16,7 @@ public class MediumEntity {
     private String Name;
     private Date Created;
     private BigDecimal Big;
+    private boolean Simple;
 
     public String getId() {
         return Id;
@@ -47,5 +48,13 @@ public class MediumEntity {
 
     public void setBig(BigDecimal big) {
         Big = big;
+    }
+
+    public boolean isSimple() {
+        return Simple;
+    }
+
+    public void setSimple(boolean simple) {
+        Simple = simple;
     }
 }

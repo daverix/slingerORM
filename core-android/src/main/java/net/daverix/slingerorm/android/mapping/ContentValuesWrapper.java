@@ -34,6 +34,11 @@ public class ContentValuesWrapper implements IContentValuesWrapper {
     }
 
     @Override
+    public void put(String fieldName, boolean value) {
+        mValues.put(fieldName, value);
+    }
+
+    @Override
     public void put(String fieldName, short value) {
         mValues.put(fieldName, value);
     }
