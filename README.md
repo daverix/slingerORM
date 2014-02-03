@@ -1,13 +1,13 @@
-snakedb
-=======
+SlingerORM
+==========
 
-A simple Object Relation Mapper (ORM) focusing on speed and simplicity.
+Serpent is a simple Object Relation Mapper (ORM) focusing on speed and simplicity.
 
 
 Usage
 -----
 
-SnakeDB looks at all classes annotated with the DatabaseEntity annotation and then compiles and generates a specific mapper class for each of the annotated classes. The bare minimum of an entity looks like this:
+SlingerORM looks at all classes annotated with the DatabaseEntity annotation and then compiles and generates a specific mapper class for each of the annotated classes. The bare minimum of an entity looks like this:
 
 ```
 @DatabaseEntity
