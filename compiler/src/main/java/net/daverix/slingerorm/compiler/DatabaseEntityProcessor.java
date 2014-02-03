@@ -122,7 +122,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             .append("    }\n\n");
     }
 
-    protected void appendCreateTableSql(BufferedWriter bw, Element entity, String tableName, List<Element> validFields) throws IOException {
+    protected void appendCreateTableSql(BufferedWriter bw, TypeElement entity, String tableName, List<Element> validFields) throws IOException {
         final String createTableSql = createTableSql(entity, tableName, validFields);
 
           bw.append("    @Override\n")
@@ -171,7 +171,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             final String fieldType = getDatabaseType(field);
             builder.append(fieldName).append(" ").append(fieldType);
             PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
-            if( ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(fieldName) ) || annotation != null) {
+            if( annotation != null || ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(field.getSimpleName().toString()) )) {
                 builder.append(" NOT NULL PRIMARY KEY");
                 primaryKeySet = true;
             }
@@ -182,7 +182,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         }
 
         if(!primaryKeySet)
-            throw new IllegalStateException("Primary key not found when creating SQL!");
+            throw new IllegalStateException("Primary key not found when creating SQL for entity " + entity.getSimpleName());
 
         builder.append(")");
 
