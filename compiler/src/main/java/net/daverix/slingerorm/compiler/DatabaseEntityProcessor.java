@@ -163,6 +163,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         DatabaseEntity entityAnnotation = entity.getAnnotation(DatabaseEntity.class);
         String primaryKey = entityAnnotation.primaryKey();
 
+        boolean primaryKeySet = false;
+
         for(int i=0;i<validFields.size();i++) {
             final Element field = validFields.get(i);
             final String fieldName = getDatabaseFieldName(field);
@@ -171,12 +173,16 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
             if( ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(fieldName) ) || annotation != null) {
                 builder.append(" NOT NULL PRIMARY KEY");
+                primaryKeySet = true;
             }
 
             if(i < validFields.size() - 1) {
                 builder.append(", ");
             }
         }
+
+        if(!primaryKeySet)
+            throw new IllegalStateException("Primary key not found when creating SQL!");
 
         builder.append(")");
 
