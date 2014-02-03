@@ -9,7 +9,7 @@ import java.util.Date;
 /**
  * Created by daverix on 2/1/14.
  */
-@DatabaseEntity("Medium")
+@DatabaseEntity(name = "Medium")
 public class MediumEntity {
     @PrimaryKey
     private String Id;

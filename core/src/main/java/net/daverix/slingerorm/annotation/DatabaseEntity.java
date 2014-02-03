@@ -12,5 +12,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface DatabaseEntity {
-    public String value() default "";
+    public String name() default "";
+
+    /**
+     * Use this property if you can't annotate a field in a superclass
+     * @return the primary key
+     */
+    public String primaryKey() default "";
 }

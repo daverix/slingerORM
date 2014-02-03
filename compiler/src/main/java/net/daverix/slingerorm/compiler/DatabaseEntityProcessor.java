@@ -65,14 +65,15 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         final String tableName = getTableName(entity);
         final List<Element> validFields = getValidFields(entity);
         final List<Element> methods = getValidMethods(entity);
+        final Element primaryKeyField = getPrimaryKeyField(entity, methods, validFields);
 
         appendHeader(bw, entity, entityName);
         appendMapValues(bw, methods, entity, entityName, validFields);
         appendMap(bw, entity, methods, entityName, validFields);
         appendCreateTableSql(bw, entity, tableName, validFields);
         appendGetTableName(bw, tableName);
-        appendGetId(bw, entity, entityName, methods, validFields);
-        appendGetIdFieldName(bw, validFields);
+        appendGetId(bw, entity, entityName, methods, primaryKeyField);
+        appendGetIdFieldName(bw, primaryKeyField);
         appendFooter(bw);
     }
 
@@ -136,16 +137,16 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             .append("    }\n\n");
     }
 
-    protected void appendGetId(BufferedWriter bw, Element entity, String entityName, List<Element> methods, List<Element> validFields) throws IOException {
-        final String idGetterName = getIdGetter(entity, methods, validFields);
+    protected void appendGetId(BufferedWriter bw, TypeElement entity, String entityName, List<Element> methods, Element primaryKeyField) throws IOException {
+        final String idGetterName = getIdGetter(entity, methods, primaryKeyField);
           bw.append("    @Override\n")
             .append("    public String getId(").append(entityName).append(" item) {\n")
             .append("        return String.valueOf(item.").append(idGetterName).append(");\n")
             .append("    }\n\n");
     }
 
-    protected void appendGetIdFieldName(BufferedWriter bw, List<Element> validFields) throws IOException {
-        final String idFieldName = getIdFieldname(validFields);
+    protected void appendGetIdFieldName(BufferedWriter bw, Element primaryKeyField) throws IOException {
+        final String idFieldName = getIdFieldname(primaryKeyField);
           bw.append("    @Override\n")
             .append("    public String getIdFieldName() {\n")
             .append("        return \"").append(idFieldName).append("\";\n")
@@ -311,20 +312,46 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         return null;
     }
 
-    protected String getIdFieldname(List<Element> validFields) {
-        Element field = findSingleElementByAnnotation(validFields, PrimaryKey.class);
-        if(field == null)
-            throw new IllegalStateException("There must be a field annotated with PrimaryKey!");
-
-        return getDatabaseFieldName(field);
+    protected String getIdFieldname(Element primaryKeyField) {
+        return getDatabaseFieldName(primaryKeyField);
     }
 
-    protected String getIdGetter(Element entity, List<Element> methods, List<Element> validFields) {
-        Element field = findSingleElementByAnnotation(validFields, PrimaryKey.class);
-        if(field == null)
-            throw new IllegalStateException("There must be a field annotated with PrimaryKey!");
+    protected String getIdGetter(TypeElement entity, List<Element> methods, Element primaryKeyField) {
+        return findGetter(entity, methods, primaryKeyField);
+    }
 
-        return findGetter(entity, methods, field);
+    protected Element getPrimaryKeyField(TypeElement entity, List<Element> methods, List<Element> validFields) {
+        Element field = findSingleElementByAnnotation(validFields, PrimaryKey.class);
+        if (field == null)
+            field = getPrimaryKeyFieldUsingDatabaseEntity(entity, validFields);
+
+        if(field == null)
+            throw new IllegalStateException("There must be a field annotated with PrimaryKey or the key specified in @DatabaseEntity is empty!");
+
+        return field;
+    }
+
+    protected Element getPrimaryKeyFieldUsingDatabaseEntity(TypeElement entity, List<Element> validFields) {
+        DatabaseEntity annotation = entity.getAnnotation(DatabaseEntity.class);
+        String key = annotation.primaryKey();
+        if(key == null || key.equals(""))
+            return null;
+
+        Element field = getFieldByName(validFields, key);
+        if(field == null)
+            throw new IllegalStateException("Field specified in DatabaseEntity doesn't exist in entity class!");
+
+        return field;
+    }
+
+    protected Element getFieldByName(List<Element> fields, String name) {
+        for(Element field : fields) {
+            if(name.equals(field.getSimpleName().toString())) {
+                return field;
+            }
+        }
+
+        return null;
     }
 
     protected Element findSingleElementByAnnotation(List<? extends Element> elements, Class<? extends Annotation> annotationClass) {
@@ -340,7 +367,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
 
     protected String getTableName(Element entity) {
         DatabaseEntity annotation = entity.getAnnotation(DatabaseEntity.class);
-        String tableName = annotation.value();
+        String tableName = annotation.name();
         if(tableName == null || tableName.equals(""))
             return entity.getSimpleName().toString();
 

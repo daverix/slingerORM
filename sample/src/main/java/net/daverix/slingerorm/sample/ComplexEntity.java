@@ -8,7 +8,7 @@ import net.daverix.slingerorm.annotation.SetField;
 /**
  * Created by daverix on 2/1/14.
  */
-@DatabaseEntity("Complex")
+@DatabaseEntity(name = "Complex", primaryKey = "_id")
 public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("name") private String _name;
     @FieldName("value") private double _value;
