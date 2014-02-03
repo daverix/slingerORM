@@ -1,7 +1,7 @@
 SlingerORM
 ==========
 
-Serpent is a simple Object Relation Mapper (ORM) focusing on speed and simplicity.
+SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simplicity.
 
 
 Usage
