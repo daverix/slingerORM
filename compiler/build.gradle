@@ -13,3 +13,5 @@ uploadArchives {
         }
     }
 }
+
+sourceCompatibility = 1.6
