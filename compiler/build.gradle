@@ -14,4 +14,4 @@ uploadArchives {
     }
 }
 
-sourceCompatibility = 1.6
+sourceCompatibility = JavaVersion.VERSION_1_6
