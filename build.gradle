@@ -15,18 +15,12 @@ buildscript {
 
 allprojects {
     group = 'net.daverix.slingerorm'
-    version = '0.1.5'
+    version = '0.1.6'
 	
     repositories {
         mavenCentral()
-    }
-	
-	apply plugin: 'maven'
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
-            }
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
         }
     }
 }
