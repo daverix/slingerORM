@@ -29,7 +29,7 @@ import java.util.Set;
  * This Processor creates Mappers for each class annotated with the DatabaseEntity annotation.
  */
 @SupportedAnnotationTypes("net.daverix.slingerorm.annotation.DatabaseEntity")
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class DatabaseEntityProcessor extends AbstractProcessor {
     private static final String TYPE_STRING = "java.lang.String";
     private static final String TYPE_BIG_DECIMAL = "java.math.BigDecimal";
