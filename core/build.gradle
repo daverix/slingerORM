@@ -5,7 +5,7 @@ uploadArchives {
     repositories {
         mavenDeployer {
             repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
-            pom.artifactId = 'slingerorm'
+            pom.artifactId = 'slingerorm-core'
         }
     }
 }
