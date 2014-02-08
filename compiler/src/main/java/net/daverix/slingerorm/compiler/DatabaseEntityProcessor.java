@@ -2,9 +2,9 @@ package net.daverix.slingerorm.compiler;
 
 import net.daverix.slingerorm.annotation.*;
 import net.daverix.slingerorm.exception.FieldNotFoundException;
-import net.daverix.slingerorm.mapping.IFetchableValues;
-import net.daverix.slingerorm.mapping.IInsertableValues;
-import net.daverix.slingerorm.mapping.IMapping;
+import net.daverix.slingerorm.mapping.FetchableValues;
+import net.daverix.slingerorm.mapping.InsertableValues;
+import net.daverix.slingerorm.mapping.Mapping;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -83,12 +83,12 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
 
           bw.append("package ").append(packageElement.getQualifiedName()).append(";\n\n")
             .append("import ").append(FieldNotFoundException.class.getName()).append(";\n")
-            .append("import ").append(IFetchableValues.class.getName()).append(";\n")
-            .append("import ").append(IInsertableValues.class.getName()).append(";\n")
-            .append("import ").append(IMapping.class.getName()).append(";\n")
+            .append("import ").append(FetchableValues.class.getName()).append(";\n")
+            .append("import ").append(InsertableValues.class.getName()).append(";\n")
+            .append("import ").append(Mapping.class.getName()).append(";\n")
             .append("import ").append(entity.getQualifiedName()).append(";\n\n")
             .append("public class ").append(entityName).append("Mapping")
-            .append(" implements IMapping<").append(entityName).append("> {\n\n");
+            .append(" implements Mapping<").append(entityName).append("> {\n\n");
     }
 
     protected void appendFooter(BufferedWriter bw) throws IOException {
@@ -98,7 +98,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     protected void appendMapValues(BufferedWriter bw, List<Element> methods, Element entity, String entityName,
                                    List<Element> validFields) throws IOException {
           bw.append("    @Override\n")
-            .append("    public void mapValues(").append(entityName).append(" item, IInsertableValues values) {\n")
+            .append("    public void mapValues(").append(entityName).append(" item, ").append(InsertableValues.class.getSimpleName()).append(" values) {\n")
             .append("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n")
             .append("        if(values == null) throw new IllegalArgumentException(\"values is null\");\n\n");
 
@@ -113,7 +113,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
 
     protected void appendMap(BufferedWriter bw, Element entity, List<Element> methods, String entityName, List<Element> validFields) throws IOException {
           bw.append("    @Override\n")
-            .append("    public ").append(entityName).append(" map(IFetchableValues values) throws FieldNotFoundException {\n")
+            .append("    public ").append(entityName).append(" map(").append(FetchableValues.class.getSimpleName()).append(" values) throws FieldNotFoundException {\n")
             .append("        ").append(entityName).append(" item = new ").append(entityName).append("();\n");
         for(Element field : validFields) {
           bw.append("        item.").append(getSetterWithParam(entity, methods, field, getValuePart(field))).append(";\n");

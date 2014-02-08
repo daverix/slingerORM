@@ -14,4 +14,3 @@ uploadArchives {
     }
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_6

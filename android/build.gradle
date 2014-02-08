@@ -1,0 +1,59 @@
+apply plugin: 'android-library'
+apply plugin: 'android-test'
+apply plugin: 'maven'
+
+android {
+    compileSdkVersion 19
+    buildToolsVersion "19.0.1"
+
+    defaultConfig {
+        minSdkVersion 7
+        targetSdkVersion 18
+        versionCode 1
+        versionName "1.0"
+    }
+
+    release {
+        runProguard false
+        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+    }
+
+    sourceSets {
+        instrumentTest.setRoot('src/test')
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    packagingOptions {
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
+}
+
+dependencies {
+    compile project(':slingerorm')
+    testCompile project(':compiler')
+
+    compile 'com.squareup.dagger:dagger:1.2.0'
+    compile 'com.squareup.dagger:dagger-compiler:1.2.0'
+
+    testCompile 'org.mockito:mockito-all:1.9.5'
+    testCompile "junit:junit:4.10"
+    testCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
+
+    //Used for Android Studio so it finds the references
+    instrumentTestCompile project(':compiler')
+    instrumentTestCompile 'org.mockito:mockito-all:1.9.5'
+    instrumentTestCompile 'junit:junit:4.10'
+    instrumentTestCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
+            pom.artifactId = 'slingerorm-android'
+        }
+    }
+}

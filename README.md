@@ -50,26 +50,70 @@ public class ExampleEntity {
 }
 ```
 
-When using the mapper you will not call the generated classes directly. The MappingFetcher is used for that. Register your entities and then initialize the MappingFetcher. After a call to initialize get the mapping for a specific entity by calling getMapping(mappingClass):
+When using the mapper you will not call the generated classes directly. The MappingFetcher is used for that. When calling fetchMapping(mappingClass) it will first see if the mapping have been called before. If it exists in memory then it will just returns it, otherwise it will initiate the generated mapper class for the specific entity class and then return it (The lazy approach):
 
 ```
-IMappingFetcher mappingFetcher = new MappingFetcher();
-mappingFetcher.registerEntity(ExampleEntity.class);
-mappingFetcher.initialize();
-
-IMapping mapping = mappingFetcher.getMapping(ExampleEntity.class);
+MappingFetcher mappingFetcher = new LazyMappingFetcher();
+Mapping<ExampleEntity> mapping = mappingFetcher.fetchMapping(ExampleEntity.class);
 String sql = mapping.getCreateTableSql();
 ```
 
-If you are developing on Android, there is a class SqliteStorage which will help you with your database interactions. Pass the mapper above to the constructor together with a SQLiteDatabase and call initStorage to create the database table with data from the mapper.
+There is also an interface called EntityStorage that you can use to store your entities to the database and query them. Right now there is only an implementation for Android called SQLiteStorage that implements this interface. You can provide the required dependencies for SQLiteStorage like this:
 
 ```
-IStorage<ExampleEntity> storage = new SQLiteStorage<ComplexEntity>(db, mapper);
-storage.initStorage();
+SQLiteDatabaseReference dbReference = new ExampleSQLiteDatabaseHelper();
+MappingFetcher mappingFetcher = new LazyMappingFetcher();
+InsertableContentValuesFactory insertableContentValuesFactory = new ContentValuesWrapperFactory();
+FetchableCursorValuesFactory fetchableCursorValuesFactory = new CursorWrapperFactory();
+
+EntityStorageFactory storageFactory = new SQLiteStorageFactory(SQLiteDatabaseReference dbReference,
+                                                                      MappingFetcher mappingFetcher,
+                                                                      InsertableContentValuesFactory insertableContentValuesFactory,
+                                                                      FetchableCursorValuesFactory fetchableCursorValuesFactory);
+
+EntityStorage<ExampleEntity> storage = storageFactory.getStorage(ComplexEntity.class);
+
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
 storage.insert(entity);
 ```
+
+..or you can use the provided Dagger module to inject the dependencies:
+
+```
+ObjectGraph og = ObjectGraph.create(new MappingTestModule());
+EntityStorageFactory storageFactory = og.get(EntityStorageFactory.class);
+EntityStorage<ExampleEntity> storage = storageFactory.getStorage(ComplexEntity.class);
+
+ExampleEntity entity = new ExampleEntity();
+entity.setName("David");
+storage.insert(entity);
+```
+
+Using dagger you must provide your own dagger module that provides an implementation for SQLiteDatabaseReference:
+
+```
+@Module(includes = MappingModule.class)
+public class ExampleModule {
+    @Provides
+    public SQLiteDatabaseReference provideSQLiteDatabaseReference(ExampleSQLiteDatabaseHelper dbReference) {
+        return dReference;
+    }
+}
+
+```
+
+Download
+--------
+
+The project is currently in an alpha stage. Will upload it to Maven Central eventually. In the meantime you have to call the following code to create a local repository:
+
+```
+./gradlew build uploadArchives
+```
+
+You could change the build script so the build is placed in your local maven repository, right now it's placed in the pkg/ folder in the root of the project.
+
 
 License
 -------

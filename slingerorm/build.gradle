@@ -1,12 +1,15 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 
+dependencies {
+    compile project(':core')
+}
+
 uploadArchives {
     repositories {
         mavenDeployer {
             repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
-            pom.artifactId = 'slingerorm-core'
+            pom.artifactId = 'slingerorm'
         }
     }
 }
-

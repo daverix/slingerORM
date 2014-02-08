@@ -1,5 +1,4 @@
 apply plugin: 'android'
-apply plugin: 'android-test'
 
 android {
     compileSdkVersion 19
@@ -18,28 +17,18 @@ android {
         }
     }
 
-    sourceSets {
-        instrumentTest.setRoot('src/test')
-    }
-
     lintOptions {
         disable 'InvalidPackage'
+    }
+
+    packagingOptions {
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
     }
 }
 
 dependencies {
     compile 'com.android.support:appcompat-v7:+'
 
-    compile project(':core-android')
+    compile project(':android')
     compile project(':compiler')
-
-    testCompile 'org.mockito:mockito-all:1.9.5'
-    testCompile "junit:junit:4.10"
-    testCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
-    testCompile 'com.squareup:fest-android:1.0.+'
-
-    //Used for Android Studio so it finds the references
-    instrumentTestCompile 'org.mockito:mockito-all:1.9.5'
-    instrumentTestCompile 'junit:junit:4.10'
-    instrumentTestCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
 }
