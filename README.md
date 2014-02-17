@@ -81,7 +81,7 @@ storage.insert(entity);
 ..or you can use the provided Dagger module to inject the dependencies:
 
 ```
-ObjectGraph og = ObjectGraph.create(new MappingTestModule());
+ObjectGraph og = ObjectGraph.create(new ExampleModule());
 EntityStorageFactory storageFactory = og.get(EntityStorageFactory.class);
 EntityStorage<ExampleEntity> storage = storageFactory.getStorage(ComplexEntity.class);
 
