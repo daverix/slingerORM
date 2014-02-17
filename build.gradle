@@ -15,7 +15,7 @@ buildscript {
 
 allprojects {
     group = 'net.daverix.slingerorm'
-    version = '0.2.0.1'
+    version = '0.2.0.2'
 	
     repositories {
         mavenCentral()
@@ -23,6 +23,4 @@ allprojects {
             url 'https://oss.sonatype.org/content/repositories/snapshots/'
         }
     }
-
-    sourceCompatibility = JavaVersion.VERSION_1_6
 }
