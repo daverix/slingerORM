@@ -3,6 +3,8 @@ apply plugin: 'maven'
 
 dependencies {
     compile project(':core')
+
+    compile 'javax.inject:javax.inject:1'
 }
 
 uploadArchives {

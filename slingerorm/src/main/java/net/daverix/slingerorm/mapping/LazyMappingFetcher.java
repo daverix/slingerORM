@@ -2,6 +2,7 @@ package net.daverix.slingerorm.mapping;
 
 import net.daverix.slingerorm.exception.FetchMappingException;
 
+import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,9 +12,9 @@ import java.util.Map;
 public class LazyMappingFetcher implements MappingFetcher {
     private final Map<Class<?>, Mapping<?>> mMappings = new HashMap<Class<?>, Mapping<?>>();
 
+    @Inject
     public LazyMappingFetcher() {
     }
-
 
     @Override
     public <T> Mapping<T> fetchMapping(Class<T> entityClass) throws FetchMappingException {
