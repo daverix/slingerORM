@@ -2,6 +2,7 @@ package net.daverix.slingerorm.mapping;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Created by daverix on 2/1/14.
@@ -19,4 +20,5 @@ public interface InsertableValues {
     public void put(String fieldName, long value);
     public void put(String fieldName, Date value);
     public void put(String fieldName, BigDecimal value);
+    public void put(String fieldName, UUID value);
 }

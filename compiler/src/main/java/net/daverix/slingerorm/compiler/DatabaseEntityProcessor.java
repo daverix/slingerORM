@@ -34,6 +34,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     private static final String TYPE_STRING = "java.lang.String";
     private static final String TYPE_BIG_DECIMAL = "java.math.BigDecimal";
     private static final String TYPE_DATE = "java.util.Date";
+    private static final String TYPE_UUID = "java.util.UUID";
 
     @Override
     public boolean process(Set<? extends TypeElement> typeElements, RoundEnvironment roundEnvironment) {
@@ -211,6 +212,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
                     return "REAL";
                 } else if(typeName.equals(TYPE_STRING)) {
                     return "TEXT";
+                } else if(typeName.equals(TYPE_UUID)) {
+                    return "TEXT";
                 } else {
                     throw new UnsupportedOperationException(typeName + " not supported by SlingerORM");
                 }
@@ -287,6 +290,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
                     return "values.getBigDecimal(\"" + fieldName + "\")";
                 } else if(typeName.equals(TYPE_STRING)) {
                     return "values.getString(\"" + fieldName + "\")";
+                } else if(typeName.equals(TYPE_UUID)) {
+                    return "values.getUUID(\"" + fieldName + "\")";
                 }
 
                 throw new UnsupportedOperationException(typeName + " is not supported by SlingerORM");

@@ -4,6 +4,7 @@ import net.daverix.slingerorm.exception.FieldNotFoundException;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Created by daverix on 2/1/14.
@@ -22,4 +23,5 @@ public interface FetchableValues {
 
     public BigDecimal getBigDecimal(String fieldName) throws FieldNotFoundException;
     public Date getDate(String fieldName) throws FieldNotFoundException;
+    public UUID getUUID(String fieldName) throws FieldNotFoundException;
 }

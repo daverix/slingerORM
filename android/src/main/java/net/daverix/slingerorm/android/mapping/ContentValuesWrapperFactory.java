@@ -2,10 +2,10 @@ package net.daverix.slingerorm.android.mapping;
 
 import android.content.ContentValues;
 
+import javax.inject.Inject;
 import java.math.BigDecimal;
 import java.util.Date;
-
-import javax.inject.Inject;
+import java.util.UUID;
 
 public class ContentValuesWrapperFactory implements InsertableContentValuesFactory {
 
@@ -69,6 +69,11 @@ public class ContentValuesWrapperFactory implements InsertableContentValuesFacto
         @Override
         public void put(String fieldName, BigDecimal value) {
             mValues.put(fieldName, value != null ? value.doubleValue() : 0);
+        }
+
+        @Override
+        public void put(String fieldName, UUID value) {
+            mValues.put(fieldName, value != null ? value.toString() : null);
         }
 
         @Override

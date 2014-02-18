@@ -5,6 +5,7 @@ import net.daverix.slingerorm.annotation.PrimaryKey;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Created by daverix on 2/1/14.
@@ -17,6 +18,7 @@ public class MediumEntity {
     private Date Created;
     private BigDecimal Big;
     private boolean Simple;
+    private UUID GroupId;
 
     public String getId() {
         return Id;
@@ -56,5 +58,13 @@ public class MediumEntity {
 
     public void setSimple(boolean simple) {
         Simple = simple;
+    }
+
+    public UUID getGroupId() {
+        return GroupId;
+    }
+
+    public void setGroupId(UUID groupId) {
+        GroupId = groupId;
     }
 }
