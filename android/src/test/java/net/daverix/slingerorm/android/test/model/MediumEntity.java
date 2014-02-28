@@ -1,5 +1,6 @@
 package net.daverix.slingerorm.android.test.model;
 
+import net.daverix.slingerorm.android.test.serialization.TestSerializer;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
@@ -10,7 +11,7 @@ import java.util.UUID;
 /**
  * Created by daverix on 2/1/14.
  */
-@DatabaseEntity(name = "Medium")
+@DatabaseEntity(name = "Medium", serializer = TestSerializer.class)
 public class MediumEntity {
     @PrimaryKey
     private String Id;

@@ -1,11 +1,11 @@
 package net.daverix.slingerorm.android.test.mapping;
 
 import net.daverix.slingerorm.android.test.model.SimpleEntity;
-import net.daverix.slingerorm.mapping.FetchableValues;
 import net.daverix.slingerorm.mapping.InsertableValues;
+import net.daverix.slingerorm.mapping.ResultRow;
 import net.daverix.slingerorm.mapping.LazyMappingFetcher;
 import net.daverix.slingerorm.mapping.Mapping;
-import net.daverix.slingerorm.mapping.MappingFetcher;
+import net.daverix.slingerorm.MappingFetcher;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class SimpleEntityMappingTest {
         final String expectedMessage = "hej";
         final int expectedLength = 42;
 
-        final FetchableValues values = mock(FetchableValues.class);
+        final ResultRow values = mock(ResultRow.class);
         when(values.getString("id")).thenReturn(expectedId);
         when(values.getString("message")).thenReturn(expectedMessage);
         when(values.getInt("Length")).thenReturn(expectedLength);

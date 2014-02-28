@@ -1,7 +1,8 @@
-package net.daverix.slingerorm.mapping;
+package net.daverix.slingerorm;
 
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.exception.FetchMappingException;
+import net.daverix.slingerorm.mapping.Mapping;
 
 /**
  * Created by daverix on 2/1/14.
@@ -16,4 +17,6 @@ public interface MappingFetcher {
      * @throws FetchMappingException if mapping can't fetched
      */
     <T> Mapping<T> fetchMapping(Class<T> entityClass) throws FetchMappingException;
+
+    void registerTypeSerializer(Object typeSerializer);
 }

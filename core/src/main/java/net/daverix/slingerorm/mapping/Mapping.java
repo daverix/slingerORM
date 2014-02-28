@@ -1,6 +1,7 @@
 package net.daverix.slingerorm.mapping;
 
 import net.daverix.slingerorm.exception.FieldNotFoundException;
+import net.daverix.slingerorm.exception.TypeSerializationException;
 
 /**
  * Created by daverix on 2/1/14.
@@ -11,15 +12,15 @@ public interface Mapping<T> {
      * @param item the item with data
      * @throws net.daverix.slingerorm.exception.FieldNotFoundException when field can't be found in values
      */
-    public void mapValues(T item, InsertableValues values) throws FieldNotFoundException;
+    public void mapValues(T item, InsertableValues values) throws FieldNotFoundException, TypeSerializationException;
 
     /**
-     * Creates an object with the data from the database pointer
-     * @param values pointer to the database
+     * Creates an object with the data deserialize the database pointer
+     * @param row pointer to the database
      * @return an object of the specified template type
      * @throws net.daverix.slingerorm.exception.FieldNotFoundException when field can't be found in values
      */
-    public T map(FetchableValues values) throws FieldNotFoundException;
+    public T map(ResultRow row) throws FieldNotFoundException, TypeSerializationException;
 
     /**
      * Returns a create table statement for the template type

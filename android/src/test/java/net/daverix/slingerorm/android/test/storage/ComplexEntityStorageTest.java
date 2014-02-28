@@ -1,21 +1,17 @@
 package net.daverix.slingerorm.android.test.storage;
 
+import dagger.ObjectGraph;
+import net.daverix.slingerorm.Session;
+import net.daverix.slingerorm.SessionFactory;
 import net.daverix.slingerorm.android.test.dagger.MappingTestModule;
 import net.daverix.slingerorm.android.test.model.ComplexEntity;
-import net.daverix.slingerorm.storage.EntityStorage;
-import net.daverix.slingerorm.storage.EntityStorageFactory;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import dagger.ObjectGraph;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -24,7 +20,7 @@ import static org.junit.Assert.assertThat;
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 public class ComplexEntityStorageTest {
-    private EntityStorage<ComplexEntity> mStorage;
+    private Session mSession;
     
     @Test
     public void shouldRoundtripComplexObject() throws Exception {
@@ -33,9 +29,16 @@ public class ComplexEntityStorageTest {
         final double expectedValue = 1.831234d;
         final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
         entity.setIgnoreThisField("ignore this");
-        
-        mStorage.insert(entity);
-        final ComplexEntity actual = mStorage.get(String.valueOf(expectedId));
+
+        try {
+            mSession.beginTransaction();
+            mSession.insert(entity);
+            mSession.setTransactionSuccessful();
+        } finally {
+            mSession.endTransaction();
+        }
+
+        final ComplexEntity actual = mSession.querySingle(ComplexEntity.class, String.valueOf(expectedId));
 
         assertThat(actual.getId(), is(equalTo(expectedId)));
         assertThat(actual.getEntityName(), is(equalTo(expectedName)));
@@ -46,9 +49,9 @@ public class ComplexEntityStorageTest {
     @Before
     public void setUp() throws Exception {
         ObjectGraph og = ObjectGraph.create(new MappingTestModule());
-
-        EntityStorageFactory storageFactory = og.get(EntityStorageFactory.class);
-        mStorage = storageFactory.getStorage(ComplexEntity.class);
+        SessionFactory factory = og.get(SessionFactory.class);
+        mSession = factory.openSession();
+        mSession.initTable(ComplexEntity.class);
     }
 
     private ComplexEntity createEntity(long id, String name, double value) {

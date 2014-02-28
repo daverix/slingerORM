@@ -1,5 +1,7 @@
 package net.daverix.slingerorm.annotation;
 
+import net.daverix.slingerorm.serialization.DefaultSerializer;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -19,4 +21,6 @@ public @interface DatabaseEntity {
      * @return the primary key
      */
     public String primaryKey() default "";
+
+    public Class<?> serializer() default DefaultSerializer.class;
 }

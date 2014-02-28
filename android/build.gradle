@@ -13,13 +13,8 @@ android {
         versionName "1.0"
     }
 
-    release {
-        runProguard false
-        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
-    }
-
     sourceSets {
-        instrumentTest.setRoot('src/test')
+        androidTest.setRoot('src/test')
     }
 
     lintOptions {
@@ -32,7 +27,7 @@ android {
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility = JavaVersion.VERSION_1_6
+        targetCompatibility JavaVersion.VERSION_1_6
     }
 }
 
@@ -48,10 +43,10 @@ dependencies {
     testCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
 
     //Used for Android Studio so it finds the references
-    instrumentTestCompile project(':compiler')
-    instrumentTestCompile 'org.mockito:mockito-all:1.9.5'
-    instrumentTestCompile 'junit:junit:4.10'
-    instrumentTestCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
+    androidTestCompile project(':compiler')
+    androidTestCompile 'org.mockito:mockito-all:1.9.5'
+    androidTestCompile 'junit:junit:4.10'
+    androidTestCompile 'org.robolectric:robolectric:2.3-SNAPSHOT'
 }
 
 uploadArchives {
