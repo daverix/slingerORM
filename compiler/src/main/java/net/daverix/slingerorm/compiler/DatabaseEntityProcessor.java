@@ -473,7 +473,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         for(Modifier modifier : modifiers) {
             String name = modifier.name();
 
-            if("STATIC".equals(name) || "TRANSIENT".equals(name)) {
+            if("STATIC".equals(name) || "TRANSIENT".equals(name) || field.getAnnotation(NotDatabaseField.class) != null) {
                 return false;
             }
         }

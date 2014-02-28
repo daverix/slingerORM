@@ -1,9 +1,6 @@
 package net.daverix.slingerorm.android.test.model;
 
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.FieldName;
-import net.daverix.slingerorm.annotation.GetField;
-import net.daverix.slingerorm.annotation.SetField;
+import net.daverix.slingerorm.annotation.*;
 
 /**
  * Created by daverix on 2/1/14.
@@ -13,6 +10,9 @@ public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("name") private String _name;
     @FieldName("value") private double _value;
     @FieldName("isComplex") private boolean _complex;
+
+    @NotDatabaseField
+    private String _ignoreThisField;
 
     @GetField("_name")
     public String getEntityName() {
@@ -42,5 +42,14 @@ public class ComplexEntity extends AbstractComplexEntity {
     @GetField("_complex")
     public boolean isComplex() {
         return _complex;
+    }
+
+
+    public String getIgnoreThisField() {
+        return _ignoreThisField;
+    }
+
+    public void setIgnoreThisField(String ignoreThisField) {
+        _ignoreThisField = ignoreThisField;
     }
 }

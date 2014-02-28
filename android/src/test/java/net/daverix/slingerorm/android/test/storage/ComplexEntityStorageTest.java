@@ -15,6 +15,7 @@ import dagger.ObjectGraph;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -31,6 +32,7 @@ public class ComplexEntityStorageTest {
         final String expectedName = "David";
         final double expectedValue = 1.831234d;
         final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
+        entity.setIgnoreThisField("ignore this");
         
         mStorage.insert(entity);
         final ComplexEntity actual = mStorage.get(String.valueOf(expectedId));
@@ -38,6 +40,7 @@ public class ComplexEntityStorageTest {
         assertThat(actual.getId(), is(equalTo(expectedId)));
         assertThat(actual.getEntityName(), is(equalTo(expectedName)));
         assertThat(actual.getValue(), is(equalTo(expectedValue)));
+        assertThat(actual.getIgnoreThisField(), is(nullValue()));
     }
 
     @Before
