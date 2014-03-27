@@ -62,6 +62,31 @@ public class ComplexEntityStorageTest {
         assertThat(actual.getIgnoreThisField(), is(nullValue()));
     }
 
+    @Test
+    public void shouldSaveAndUpdateObject() throws Exception {
+        final long expectedId = 42;
+        final String expectedName = "David";
+        final double expectedValue = 1.831234d;
+        final ComplexEntity oldEntity = createEntity(expectedId, "Adam", 2);
+        final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
+
+        try {
+            mSession.beginTransaction();
+            mSession.replace(oldEntity);
+            mSession.replace(entity);
+            mSession.setTransactionSuccessful();
+        } finally {
+            mSession.endTransaction();
+        }
+
+        final ComplexEntity actual = mSession.querySingle(ComplexEntity.class, String.valueOf(expectedId));
+
+        assertThat(actual.getId(), is(equalTo(expectedId)));
+        assertThat(actual.getEntityName(), is(equalTo(expectedName)));
+        assertThat(actual.getValue(), is(equalTo(expectedValue)));
+        assertThat(actual.getIgnoreThisField(), is(nullValue()));
+    }
+
     @Before
     public void setUp() throws Exception {
         ObjectGraph og = ObjectGraph.create(new MappingTestModule());
