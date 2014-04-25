@@ -61,11 +61,12 @@ String sql = mapping.getCreateTableSql();
 To save entities to the database, use the provided SessionFactory to get a Session. The session has methods for inserting, updating, deleting and querying the database.
 
 ```
-
-MappingFetcher mappingFetcher = new LazyMappingFetcher();
 SQLiteDatabase database = SQLiteDatabase.create(new File("testDb"));
 ResultRowsFactory resultRowsFactory = new CursorRowResultFactory();
 DatabaseConnection databaseConnection = new SQLiteDatabaseConnection(database, resultRowsFactory);
+
+MappingFetcher mappingFetcher = new LazyMappingFetcher();
+
 SessionFactory sessionFactory = new SlingerSessionFactory(databaseConnection, mappingFetcher);
 
 Session session = sessionFactory.openSession();
@@ -73,7 +74,7 @@ session.initTable(ExampleEntity.class);
 
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
-storage.insert(entity);
+session.insert(entity);
 ```
 
 ..or you can use the provided Dagger module to inject the dependencies:
@@ -87,7 +88,7 @@ session.initTable(ExampleEntity.class);
 
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
-storage.insert(entity);
+session.insert(entity);
 ```
 
 Using dagger you must provide your own dagger module that provides an implementation for SQLiteDatabaseReference (if you use Android):
