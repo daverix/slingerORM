@@ -4,9 +4,6 @@ import net.daverix.slingerorm.exception.SessionException;
 
 import java.util.Collection;
 
-/**
- * Created by daverix on 3/1/14.
- */
 public interface Session {
     <T> void initTable(Class<T> entityClass) throws SessionException;
 

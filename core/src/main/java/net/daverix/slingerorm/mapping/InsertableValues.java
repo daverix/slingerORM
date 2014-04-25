@@ -1,8 +1,5 @@
 package net.daverix.slingerorm.mapping;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public interface InsertableValues {
     public void put(String fieldName, byte[] bytes);
     public void put(String fieldName, String value);

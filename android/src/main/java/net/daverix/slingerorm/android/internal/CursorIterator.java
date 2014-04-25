@@ -3,13 +3,9 @@ package net.daverix.slingerorm.android.internal;
 import android.database.Cursor;
 
 import net.daverix.slingerorm.mapping.ResultRow;
-import net.daverix.slingerorm.mapping.ResultRows;
 
 import java.util.Iterator;
 
-/**
- * Created by daverix on 3/2/14.
- */
 public class CursorIterator implements Iterator<ResultRow> {
     private final Cursor mCursor;
     private final ResultRowFactory mResultRowFactory;
@@ -31,7 +27,7 @@ public class CursorIterator implements Iterator<ResultRow> {
     public ResultRow next() {
         return mResultRowFactory.create(mCursor);
     }
-
+    
     @Override
     public void remove() {
 

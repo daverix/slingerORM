@@ -3,9 +3,6 @@ package net.daverix.slingerorm.android.test.model;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
-/**
- * Created by daverix on 2/1/14.
- */
 @DatabaseEntity
 public class SimpleEntity {
     @PrimaryKey

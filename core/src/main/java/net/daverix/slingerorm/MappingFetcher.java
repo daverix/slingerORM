@@ -4,9 +4,6 @@ import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.exception.FetchMappingException;
 import net.daverix.slingerorm.mapping.Mapping;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public interface MappingFetcher {
     /**
      * Does a lazy call to get the mapping for a specific entity

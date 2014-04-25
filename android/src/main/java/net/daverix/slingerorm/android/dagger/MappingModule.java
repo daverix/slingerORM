@@ -1,7 +1,5 @@
 package net.daverix.slingerorm.android.dagger;
 
-import dagger.Module;
-import dagger.Provides;
 import net.daverix.slingerorm.MappingFetcher;
 import net.daverix.slingerorm.SessionFactory;
 import net.daverix.slingerorm.SlingerSessionFactory;
@@ -12,6 +10,9 @@ import net.daverix.slingerorm.android.internal.ResultRowsFactory;
 import net.daverix.slingerorm.mapping.LazyMappingFetcher;
 
 import javax.inject.Singleton;
+
+import dagger.Module;
+import dagger.Provides;
 
 @Module(library = true, complete = false)
 public class MappingModule {

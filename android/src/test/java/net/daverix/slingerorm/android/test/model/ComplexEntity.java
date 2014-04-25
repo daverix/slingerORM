@@ -2,9 +2,6 @@ package net.daverix.slingerorm.android.test.model;
 
 import net.daverix.slingerorm.annotation.*;
 
-/**
- * Created by daverix on 2/1/14.
- */
 @DatabaseEntity(name = "Complex", primaryKey = "_id")
 public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("name") private String _name;

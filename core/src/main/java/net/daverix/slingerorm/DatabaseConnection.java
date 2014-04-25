@@ -3,9 +3,6 @@ package net.daverix.slingerorm;
 import net.daverix.slingerorm.mapping.InsertableValues;
 import net.daverix.slingerorm.mapping.ResultRows;
 
-/**
- * Created by daverix on 3/1/14.
- */
 public interface DatabaseConnection {
     void beginTransaction();
     void setTransactionSuccessful();

@@ -8,9 +8,6 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.UUID;
 
-/**
- * Created by daverix on 2/1/14.
- */
 @DatabaseEntity(name = "Medium", serializer = TestSerializer.class)
 public class MediumEntity {
     @PrimaryKey

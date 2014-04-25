@@ -2,9 +2,6 @@ package net.daverix.slingerorm.mapping;
 
 import net.daverix.slingerorm.exception.FieldNotFoundException;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public interface ResultRow {
     public byte[] getBlob(String fieldName) throws FieldNotFoundException;
     public String getString(String fieldName) throws FieldNotFoundException;

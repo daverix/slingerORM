@@ -20,9 +20,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Created by daverix on 2/1/14.
- */
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest= Config.NONE)
 public class SimpleEntityMappingTest {

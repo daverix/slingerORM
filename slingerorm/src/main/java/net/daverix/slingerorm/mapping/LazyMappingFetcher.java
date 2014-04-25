@@ -12,9 +12,6 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public class LazyMappingFetcher implements MappingFetcher {
     private final Map<Class<?>, Mapping<?>> mMappings = new HashMap<Class<?>, Mapping<?>>();
     private final Map<Class<?>, Object> mSerializers = new HashMap<Class<?>, Object>();

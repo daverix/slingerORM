@@ -1,8 +1,5 @@
 package net.daverix.slingerorm.exception;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public class FieldNotFoundException extends Exception {
     public FieldNotFoundException() {
     }

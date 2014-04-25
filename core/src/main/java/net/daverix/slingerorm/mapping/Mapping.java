@@ -3,9 +3,6 @@ package net.daverix.slingerorm.mapping;
 import net.daverix.slingerorm.exception.FieldNotFoundException;
 import net.daverix.slingerorm.exception.TypeSerializationException;
 
-/**
- * Created by daverix on 2/1/14.
- */
 public interface Mapping<T> {
     /**
      * Maps data in item to a {@link InsertableValues} object.

@@ -4,9 +4,6 @@ import android.database.Cursor;
 import net.daverix.slingerorm.exception.FieldNotFoundException;
 import net.daverix.slingerorm.mapping.ResultRow;
 
-/**
- * Created by daverix on 3/2/14.
- */
 public class CursorResultRow implements ResultRow {
     private final Cursor mCursor;
 

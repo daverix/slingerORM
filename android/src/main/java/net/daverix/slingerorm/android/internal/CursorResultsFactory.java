@@ -6,15 +6,17 @@ import net.daverix.slingerorm.mapping.ResultRows;
 
 import javax.inject.Inject;
 
-/**
- * Created by daverix on 3/2/14.
- */
 public class CursorResultsFactory implements ResultRowsFactory {
     private ResultRowFactory mResultRowFactory;
 
     @Inject
     public CursorResultsFactory(ResultRowFactory resultRowFactory) {
+        if(resultRowFactory == null) throw new IllegalArgumentException("resultRowFactory is null");
         mResultRowFactory = resultRowFactory;
+    }
+
+    public CursorResultsFactory() {
+        mResultRowFactory = new CursorRowResultFactory();
     }
 
     @Override

@@ -12,9 +12,6 @@ import javax.inject.Singleton;
 import dagger.Module;
 import dagger.Provides;
 
-/**
- * Created by daverix on 2/8/14.
- */
 @Module(includes = MappingModule.class, injects = SessionFactory.class, overrides = true)
 public class MappingTestModule {
 

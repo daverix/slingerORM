@@ -1,8 +1,5 @@
 package net.daverix.slingerorm.exception;
 
-/**
- * Created by daverix on 2/2/14.
- */
 public class InitStorageException extends Exception {
     public InitStorageException() {
     }

@@ -1,8 +1,5 @@
 package net.daverix.slingerorm.exception;
 
-/**
- * Created by daverix on 3/2/14.
- */
 public class TypeSerializationException extends Exception {
     public TypeSerializationException() {
     }

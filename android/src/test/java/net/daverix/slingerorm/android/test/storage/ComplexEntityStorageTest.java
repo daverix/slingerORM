@@ -1,22 +1,23 @@
 package net.daverix.slingerorm.android.test.storage;
 
-import dagger.ObjectGraph;
 import net.daverix.slingerorm.Session;
 import net.daverix.slingerorm.SessionFactory;
 import net.daverix.slingerorm.android.test.dagger.MappingTestModule;
 import net.daverix.slingerorm.android.test.model.ComplexEntity;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import static org.hamcrest.CoreMatchers.*;
+import dagger.ObjectGraph;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-/**
- * Created by daverix on 2/2/14.
- */
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 public class ComplexEntityStorageTest {
