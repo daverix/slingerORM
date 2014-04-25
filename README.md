@@ -58,20 +58,18 @@ Mapping<ExampleEntity> mapping = mappingFetcher.fetchMapping(ExampleEntity.class
 String sql = mapping.getCreateTableSql();
 ```
 
-There is also an interface called EntityStorage that you can use to store your entities to the database and query them. Right now there is only an implementation for Android called SQLiteStorage that implements this interface. You can provide the required dependencies for SQLiteStorage like this:
+To save entities to the database, use the provided SessionFactory to get a Session. The session has methods for inserting, updating, deleting and querying the database.
 
 ```
-SQLiteDatabaseReference dbReference = new ExampleSQLiteDatabaseHelper();
+
 MappingFetcher mappingFetcher = new LazyMappingFetcher();
-InsertableContentValuesFactory insertableContentValuesFactory = new ContentValuesWrapperFactory();
-FetchableCursorValuesFactory fetchableCursorValuesFactory = new CursorWrapperFactory();
+SQLiteDatabase database = SQLiteDatabase.create(new File("testDb"));
+ResultRowsFactory resultRowsFactory = new CursorRowResultFactory();
+DatabaseConnection databaseConnection = new SQLiteDatabaseConnection(database, resultRowsFactory);
+SessionFactory sessionFactory = new SlingerSessionFactory(databaseConnection, mappingFetcher);
 
-EntityStorageFactory storageFactory = new SQLiteStorageFactory(SQLiteDatabaseReference dbReference,
-                                                                      MappingFetcher mappingFetcher,
-                                                                      InsertableContentValuesFactory insertableContentValuesFactory,
-                                                                      FetchableCursorValuesFactory fetchableCursorValuesFactory);
-
-EntityStorage<ExampleEntity> storage = storageFactory.getStorage(ComplexEntity.class);
+Session session = sessionFactory.openSession();
+session.initTable(ExampleEntity.class);
 
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
@@ -82,15 +80,17 @@ storage.insert(entity);
 
 ```
 ObjectGraph og = ObjectGraph.create(new MappingModule());
-EntityStorageFactory storageFactory = og.get(EntityStorageFactory.class);
-EntityStorage<ExampleEntity> storage = storageFactory.getStorage(ComplexEntity.class);
+SessionFactory sessionFactory = og.get(SessionFactory.class);
+
+Session session = sessionFactory.openSession();
+session.initTable(ExampleEntity.class);
 
 ExampleEntity entity = new ExampleEntity();
 entity.setName("David");
 storage.insert(entity);
 ```
 
-Using dagger you must provide your own dagger module that provides an implementation for SQLiteDatabaseReference:
+Using dagger you must provide your own dagger module that provides an implementation for SQLiteDatabaseReference (if you use Android):
 
 ```
 @Module(includes = MappingModule.class)
