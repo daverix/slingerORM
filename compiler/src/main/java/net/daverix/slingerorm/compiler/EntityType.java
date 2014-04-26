@@ -1,23 +1,43 @@
 package net.daverix.slingerorm.compiler;
 
-import net.daverix.slingerorm.annotation.*;
+import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.DeserializeType;
+import net.daverix.slingerorm.annotation.FieldName;
+import net.daverix.slingerorm.annotation.GetField;
+import net.daverix.slingerorm.annotation.NotDatabaseField;
+import net.daverix.slingerorm.annotation.PrimaryKey;
+import net.daverix.slingerorm.annotation.SerializeType;
+import net.daverix.slingerorm.annotation.SetField;
 
-import javax.lang.model.element.*;
+import java.lang.annotation.Annotation;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import java.lang.annotation.Annotation;
-import java.util.*;
 
-import static net.daverix.slingerorm.compiler.ElementUtils.*;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_STRING;
+import static net.daverix.slingerorm.compiler.ElementUtils.getDeclaredTypeName;
+import static net.daverix.slingerorm.compiler.ElementUtils.getElementsInTypeElement;
+import static net.daverix.slingerorm.compiler.ElementUtils.getMethodsInTypeElement;
+import static net.daverix.slingerorm.compiler.ElementUtils.getTypeKind;
+import static net.daverix.slingerorm.compiler.ElementUtils.isAccessable;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.ListUtils.firstOrDefault;
 import static net.daverix.slingerorm.compiler.ListUtils.mapItems;
 
 public class EntityType {
     private final TypeElementConverter mTypeElementConverter;
-    private final Logger mLogger;
     private final TypeElement mTypeElement;
 
     private List<Element> mElementsInType;
@@ -29,14 +49,12 @@ public class EntityType {
     private List<ExecutableElement> mSerializeMethodsInSerializer;
     private List<ExecutableElement> mDeserializeMethodsInSerializer;
 
-    public EntityType(TypeElement typeElement, TypeElementConverter typeElementConverter, Logger logger) {
+    public EntityType(TypeElement typeElement, TypeElementConverter typeElementConverter) {
         if(typeElement == null) throw new IllegalArgumentException("typeElement is null");
         if(typeElementConverter == null) throw new IllegalArgumentException("typeElementConverter is null");
-        if(logger == null) throw new IllegalArgumentException("logger is null");
 
         mTypeElement = typeElement;
         mTypeElementConverter = typeElementConverter;
-        mLogger = logger;
     }
 
     public String getName() {
@@ -282,8 +300,6 @@ public class EntityType {
             throw new IllegalArgumentException("declared type is not supported, only native and string types can be used as return value for a @DeserializeType method, method was " + executableElement.getSimpleName());
 
         final String valuePart = getValuePart(parameterObjectType, field);
-        mLogger.debug("Got " + executableElement.getSimpleName() + " with value part as input: " + valuePart);
-
         return "mSerializer." + executableElement.getSimpleName() + "(" + valuePart + ")";
     }
 

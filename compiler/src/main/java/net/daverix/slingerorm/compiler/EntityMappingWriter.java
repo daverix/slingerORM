@@ -5,27 +5,27 @@ import net.daverix.slingerorm.mapping.InsertableValues;
 import net.daverix.slingerorm.mapping.Mapping;
 import net.daverix.slingerorm.mapping.ResultRow;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.element.TypeElement;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
+
 public class EntityMappingWriter {
 
     private static final String RESULT_ROW_TYPE_NAME = ResultRow.class.getSimpleName();
     private static final String INSERTABLE_VALUES_TYPE_NAME = InsertableValues.class.getSimpleName();
-    private final Logger mLogger;
 
-    public EntityMappingWriter(Logger logger) {
-        mLogger = logger;
+    public EntityMappingWriter() {
+
     }
 
     public void writeMapper(Writer bw, TypeElement entity, ProcessingEnvironment processingEnvironment) throws IOException {
         final TypeElementConverter typeElementConverter = new ProcessingTypeElementConverter(processingEnvironment);
-        final EntityType entityType = new EntityType(entity, typeElementConverter, mLogger);
+        final EntityType entityType = new EntityType(entity, typeElementConverter);
 
         // -- Get values to append -------------------------------------------------------------------------------------
         final String mapperClassName = entityType.getMapperTypeName();
