@@ -62,8 +62,7 @@ To save entities to the database, use the provided SessionFactory to get a Sessi
 
 ```
 SQLiteDatabase database = SQLiteDatabase.create(new File("testDb"));
-ResultRowsFactory resultRowsFactory = new CursorRowResultFactory();
-DatabaseConnection databaseConnection = new SQLiteDatabaseConnection(database, resultRowsFactory);
+DatabaseConnection databaseConnection = new SQLiteDatabaseConnection(database);
 
 MappingFetcher mappingFetcher = new LazyMappingFetcher();
 
