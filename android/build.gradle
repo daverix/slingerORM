@@ -1,10 +1,10 @@
-apply plugin: 'android-library'
-apply plugin: 'android-test'
+apply plugin: 'com.android.library'
+apply plugin: 'robolectric'
 apply plugin: 'maven'
 
 android {
     compileSdkVersion 19
-    buildToolsVersion "19.0.3"
+    buildToolsVersion "19.1.0"
 
     defaultConfig {
         minSdkVersion 7
@@ -38,11 +38,6 @@ dependencies {
     compile 'com.squareup.dagger:dagger:1.2.0'
     compile 'com.squareup.dagger:dagger-compiler:1.2.0'
 
-    testCompile 'org.mockito:mockito-all:1.9.5'
-    testCompile "junit:junit:4.10"
-    testCompile 'org.robolectric:robolectric:2.3'
-
-    //Used for Android Studio so it finds the references
     androidTestCompile project(':compiler')
     androidTestCompile 'org.mockito:mockito-all:1.9.5'
     androidTestCompile 'junit:junit:4.10'
