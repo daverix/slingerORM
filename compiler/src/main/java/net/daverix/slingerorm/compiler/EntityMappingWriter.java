@@ -190,7 +190,7 @@ public class EntityMappingWriter {
                 .append("        if(connection == null) throw new IllegalArgumentException(\"connection is null\");\n\n")
                 .append("        List<").append(entityName).append("> items = new ArrayList<").append(entityName).append(">();\n")
                 .append("        try {\n")
-                .append("            ResultRows result = null;")
+                .append("            ResultRows result = null;\n")
                 .append("            try {\n")
                 .append("                result = connection.query(false, \"").append(tableName).append("\", null, selection, selectionArgs, null, null, orderBy);\n")
                 .append("                for(ResultRow values : result) {\n")
