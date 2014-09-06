@@ -32,7 +32,6 @@ import javax.inject.Inject;
  */
 public class SQLiteDatabaseConnection implements DatabaseConnection {
     private final SQLiteDatabase mDb;
-
     private final ResultRowsFactory mResultRowsFactory;
 
     @Inject

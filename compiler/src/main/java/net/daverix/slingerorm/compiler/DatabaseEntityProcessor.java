@@ -57,7 +57,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     }
 
     protected void createMapper(TypeElement entity) throws IOException {
-        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(entity.getQualifiedName() + "Mapping");
+        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(entity.getQualifiedName() + "Storage");
             BufferedWriter bw = new BufferedWriter(jfo.openWriter());
 
         mEntityMappingWriter.writeMapper(bw, entity, processingEnv);

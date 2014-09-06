@@ -15,27 +15,20 @@
  */
 package net.daverix.slingerorm.android.dagger;
 
-import net.daverix.slingerorm.MappingFetcher;
-import net.daverix.slingerorm.SessionFactory;
-import net.daverix.slingerorm.SlingerSessionFactory;
+import net.daverix.slingerorm.StorageFactory;
 import net.daverix.slingerorm.android.internal.CursorResultsFactory;
 import net.daverix.slingerorm.android.internal.CursorRowResultFactory;
 import net.daverix.slingerorm.android.internal.ResultRowFactory;
 import net.daverix.slingerorm.android.internal.ResultRowsFactory;
-import net.daverix.slingerorm.mapping.LazyMappingFetcher;
+import net.daverix.slingerorm.GeneratedStorageFactory;
 
 import javax.inject.Singleton;
 
 import dagger.Module;
 import dagger.Provides;
 
-@Module(library = true, complete = false)
-public class MappingModule {
-    @Singleton @Provides
-    public MappingFetcher provideMappingFetcher(LazyMappingFetcher mappingFetcher) {
-        return mappingFetcher;
-    }
-
+@Module(library = true)
+public class SlingerDaggerModule {
     @Singleton @Provides
     public ResultRowFactory provideResultRowFactory(CursorRowResultFactory factory) {
         return factory;
@@ -47,7 +40,7 @@ public class MappingModule {
     }
 
     @Singleton @Provides
-    public SessionFactory provideSessionFactory(SlingerSessionFactory sessionFactory) {
-        return sessionFactory;
+    public StorageFactory provideStorageFactory(GeneratedStorageFactory factory) {
+        return factory;
     }
 }

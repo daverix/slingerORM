@@ -15,23 +15,23 @@
  */
 package net.daverix.slingerorm.exception;
 
-public class SessionException extends Exception {
-    public SessionException() {
+public class StorageException extends Exception {
+    public StorageException() {
     }
 
-    public SessionException(String message) {
+    public StorageException(String message) {
         super(message);
     }
 
-    public SessionException(String message, Throwable cause) {
+    public StorageException(String message, Throwable cause) {
         super(message, cause);
     }
 
-    public SessionException(Throwable cause) {
+    public StorageException(Throwable cause) {
         super(cause);
     }
 
-    public SessionException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    public StorageException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

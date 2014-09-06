@@ -1,6 +1,10 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 
+dependencies {
+    compile 'javax.inject:javax.inject:1'
+}
+
 compileJava {
     sourceCompatibility = 1.6
     targetCompatibility = 1.6
@@ -10,7 +14,7 @@ uploadArchives {
     repositories {
         mavenDeployer {
             repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
-            pom.artifactId = 'slingerorm-core'
+            pom.artifactId = 'slingerorm'
         }
     }
 }

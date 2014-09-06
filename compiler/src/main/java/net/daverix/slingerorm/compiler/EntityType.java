@@ -77,7 +77,7 @@ public class EntityType {
     }
 
     public String getMapperTypeName() {
-        return mTypeElement.getSimpleName().toString() + "Mapping";
+        return mTypeElement.getSimpleName().toString() + "Storage";
     }
 
     public String getPrimaryKeyDbName() {

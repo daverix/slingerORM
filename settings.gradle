@@ -1,1 +1,1 @@
-include ':core', ':compiler', ':slingerorm', ':android'
+include ':core', ':compiler', ':android'

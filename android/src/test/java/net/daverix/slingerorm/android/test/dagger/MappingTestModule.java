@@ -18,16 +18,15 @@ package net.daverix.slingerorm.android.test.dagger;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.DatabaseConnection;
-import net.daverix.slingerorm.SessionFactory;
 import net.daverix.slingerorm.android.SQLiteDatabaseConnection;
-import net.daverix.slingerorm.android.dagger.MappingModule;
+import net.daverix.slingerorm.android.dagger.SlingerDaggerModule;
 
 import javax.inject.Singleton;
 
 import dagger.Module;
 import dagger.Provides;
 
-@Module(includes = MappingModule.class, injects = SessionFactory.class, overrides = true)
+@Module(includes = SlingerDaggerModule.class, library = true, overrides = true)
 public class MappingTestModule {
 
     @Provides @Singleton

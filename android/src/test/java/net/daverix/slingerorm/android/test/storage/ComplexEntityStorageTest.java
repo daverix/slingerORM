@@ -15,8 +15,12 @@
  */
 package net.daverix.slingerorm.android.test.storage;
 
-import net.daverix.slingerorm.Session;
-import net.daverix.slingerorm.SessionFactory;
+import android.database.sqlite.SQLiteDatabase;
+
+import net.daverix.slingerorm.DatabaseConnection;
+import net.daverix.slingerorm.Storage;
+import net.daverix.slingerorm.StorageFactory;
+import net.daverix.slingerorm.android.SQLiteDatabaseConnection;
 import net.daverix.slingerorm.android.test.dagger.MappingTestModule;
 import net.daverix.slingerorm.android.test.model.ComplexEntity;
 
@@ -26,7 +30,12 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import dagger.Module;
 import dagger.ObjectGraph;
+import dagger.Provides;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -36,8 +45,9 @@ import static org.junit.Assert.assertThat;
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
 public class ComplexEntityStorageTest {
-    private Session mSession;
-    
+    @Inject Storage<ComplexEntity> mStorage;
+    private DatabaseConnection mDatabaseConnection;
+
     @Test
     public void shouldRoundtripComplexObject() throws Exception {
         final long expectedId = 42;
@@ -47,14 +57,14 @@ public class ComplexEntityStorageTest {
         entity.setIgnoreThisField("ignore this");
 
         try {
-            mSession.beginTransaction();
-            mSession.insert(entity);
-            mSession.setTransactionSuccessful();
+            mDatabaseConnection.beginTransaction();
+            mStorage.insert(mDatabaseConnection, entity);
+            mDatabaseConnection.setTransactionSuccessful();
         } finally {
-            mSession.endTransaction();
+            mDatabaseConnection.endTransaction();
         }
 
-        final ComplexEntity actual = mSession.querySingle(ComplexEntity.class, String.valueOf(expectedId));
+        final ComplexEntity actual = mStorage.querySingle(mDatabaseConnection, String.valueOf(expectedId));
 
         assertThat(actual.getId(), is(equalTo(expectedId)));
         assertThat(actual.getEntityName(), is(equalTo(expectedName)));
@@ -71,15 +81,15 @@ public class ComplexEntityStorageTest {
         final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
 
         try {
-            mSession.beginTransaction();
-            mSession.replace(oldEntity);
-            mSession.replace(entity);
-            mSession.setTransactionSuccessful();
+            mDatabaseConnection.beginTransaction();
+            mStorage.replace(mDatabaseConnection, oldEntity);
+            mStorage.replace(mDatabaseConnection, entity);
+            mDatabaseConnection.setTransactionSuccessful();
         } finally {
-            mSession.endTransaction();
+            mDatabaseConnection.endTransaction();
         }
 
-        final ComplexEntity actual = mSession.querySingle(ComplexEntity.class, String.valueOf(expectedId));
+        final ComplexEntity actual = mStorage.querySingle(mDatabaseConnection, String.valueOf(expectedId));
 
         assertThat(actual.getId(), is(equalTo(expectedId)));
         assertThat(actual.getEntityName(), is(equalTo(expectedName)));
@@ -89,10 +99,19 @@ public class ComplexEntityStorageTest {
 
     @Before
     public void setUp() throws Exception {
-        ObjectGraph og = ObjectGraph.create(new MappingTestModule());
-        SessionFactory factory = og.get(SessionFactory.class);
-        mSession = factory.openSession();
-        mSession.initTable(ComplexEntity.class);
+        ObjectGraph og = ObjectGraph.create(new TestModule());
+        og.inject(this);
+
+        mDatabaseConnection = new SQLiteDatabaseConnection(SQLiteDatabase.create(null));
+        mStorage.createTable(mDatabaseConnection);
+    }
+
+    @Module(includes = MappingTestModule.class, injects = ComplexEntityStorageTest.class)
+    public class TestModule {
+        @Provides @Singleton
+        public Storage<ComplexEntity> provideComplexEntityStorage(StorageFactory storageFactory) {
+            return storageFactory.build(ComplexEntity.class);
+        }
     }
 
     private ComplexEntity createEntity(long id, String name, double value) {
