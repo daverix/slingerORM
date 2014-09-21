@@ -15,6 +15,8 @@
  */
 package net.daverix.slingerorm.compiler;
 
+import com.google.auto.service.AutoService;
+
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 
 import java.io.BufferedWriter;
@@ -22,6 +24,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
@@ -35,6 +38,7 @@ import javax.tools.JavaFileObject;
 /**
  * This Processor creates Mappers for each class annotated with the DatabaseEntity annotation.
  */
+@AutoService(Processor.class)
 @SupportedAnnotationTypes("net.daverix.slingerorm.annotation.DatabaseEntity")
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class DatabaseEntityProcessor extends AbstractProcessor {
@@ -61,6 +65,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             BufferedWriter bw = new BufferedWriter(jfo.openWriter());
 
         mEntityMappingWriter.writeMapper(bw, entity, processingEnv);
+
         bw.close();
     }
 
