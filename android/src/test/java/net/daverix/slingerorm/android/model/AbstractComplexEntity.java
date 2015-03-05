@@ -13,10 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.mapping;
+package net.daverix.slingerorm.android.model;
 
-import java.io.Closeable;
+import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.FieldName;
+import net.daverix.slingerorm.annotation.GetField;
+import net.daverix.slingerorm.annotation.SetField;
 
-public interface ResultRows extends Iterable<ResultRow>, Closeable {
+@DatabaseEntity
+public abstract class AbstractComplexEntity {
+    @FieldName("_Id") private long _id;
+
+    @GetField("_id")
+    public long getId() {
+        return _id;
+    }
+
+    @SetField("_id")
+    public void setId(long id) {
+        _id = id;
+    }
 
 }

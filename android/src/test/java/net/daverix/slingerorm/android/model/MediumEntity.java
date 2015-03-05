@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.android.test.model;
+package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.android.test.serialization.TestSerializer;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
@@ -23,7 +22,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.UUID;
 
-@DatabaseEntity(name = "Medium", serializer = TestSerializer.class)
+@DatabaseEntity(name = "Medium")
 public class MediumEntity {
     @PrimaryKey
     private String Id;

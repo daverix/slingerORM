@@ -13,12 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.android.internal;
+package net.daverix.slingerorm.android.model;
 
-import android.database.Cursor;
+import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.PrimaryKey;
 
-import net.daverix.slingerorm.mapping.ResultRow;
+@DatabaseEntity
+public class SimpleEntity {
+    @PrimaryKey
+    public String id;
+    public String message;
+    public int Length; //should be upper case letter to test both upper and lower case
 
-public interface ResultRowFactory {
-    public ResultRow create(Cursor cursor);
+    public SimpleEntity(String id, String message, int length) {
+        this.id = id;
+        this.message = message;
+        Length = length;
+    }
+
+    public SimpleEntity() {
+    }
 }

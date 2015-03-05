@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.android.test.serialization;
+package net.daverix.slingerorm.android.serialization;
 
 import net.daverix.slingerorm.annotation.DeserializeType;
 import net.daverix.slingerorm.annotation.SerializeType;
