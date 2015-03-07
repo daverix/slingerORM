@@ -18,7 +18,7 @@ package net.daverix.slingerorm.compiler;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class ListUtils {
+final class ListUtils {
     private ListUtils(){}
 
     public static <T, E> List<T> mapItems(List<E> items, Function<T, E> mapper) {

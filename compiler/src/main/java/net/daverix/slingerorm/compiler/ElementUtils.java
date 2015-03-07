@@ -32,7 +32,7 @@ import javax.lang.model.type.TypeMirror;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.ListUtils.mapItems;
 
-public final class ElementUtils {
+final class ElementUtils {
     public static final String TYPE_STRING = "java.lang.String";
 
     private ElementUtils(){}

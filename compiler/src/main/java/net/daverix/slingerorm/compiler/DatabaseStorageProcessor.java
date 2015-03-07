@@ -18,9 +18,16 @@ package net.daverix.slingerorm.compiler;
 import com.google.auto.service.AutoService;
 
 import net.daverix.slingerorm.annotation.DatabaseStorage;
+import net.daverix.slingerorm.annotation.Delete;
+import net.daverix.slingerorm.annotation.Insert;
+import net.daverix.slingerorm.annotation.Replace;
+import net.daverix.slingerorm.annotation.Select;
+import net.daverix.slingerorm.annotation.Update;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -30,6 +37,8 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
@@ -58,59 +67,96 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     }
 
     protected void createStorage(TypeElement entity) throws IOException {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
-                "creating implementation of " + entity.getSimpleName(), entity);
-
         String qualifiedName = entity.getQualifiedName().toString();
-        int lastDot = qualifiedName.lastIndexOf(".");
-        String packageName = qualifiedName.substring(0, lastDot);
+        String packageName = getPackage(qualifiedName);
         String storageImplName = "Slinger_" + entity.getSimpleName();
 
-        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(
-                packageName + "." + storageImplName);
+        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(packageName + "." + storageImplName);
 
         DatabaseStorage databaseStorage = entity.getAnnotation(DatabaseStorage.class);
-        TypeElement databaseStorageElement = getMirrorForClass(databaseStorage);
-        String serializerQualifiedName = databaseStorageElement.getQualifiedName().toString();
+        TypeElement serializerElement = getSerializerElement(databaseStorage);
+        String serializerQualifiedName = serializerElement.getQualifiedName().toString();
+        String serializerClassName = serializerElement.getSimpleName().toString();
+        String serializerPackageName = getPackage(serializerQualifiedName);
+
+        List<StorageMethod> methods = getStorageMethods(entity);
 
         BufferedWriter bw = new BufferedWriter(jfo.openWriter());
-        bw.write("package " + packageName + ";\n" +
-                 "public class " + storageImplName + " implements " + entity.getSimpleName() + " {\n" +
-                "   private " + serializerQualifiedName + " serializer;\n" +
-                "\n" +
-                "   private " + storageImplName + "(" + serializerQualifiedName + " serializer) {\n" +
-                "       this.serializer = serializer;\n" +
-                "   }\n" +
-                "\n" +
-                "   public static Builder builder() {\n" +
-                "       return new Builder();\n" +
-                "   }\n" +
-                "\n" +
-                "   public static final class Builder {\n" +
-                "       private " + serializerQualifiedName + " serializer;\n" +
-                "\n" +
-                "       private Builder() {\n" +
-                "       }\n" +
-                "\n" +
-                "       public Builder serializer(" + serializerQualifiedName + " serializer) {\n" +
-                "           this.serializer = serializer;\n" +
-                "           return this;\n" +
-                "       }\n" +
-                "\n" +
-                "       public " + entity.getSimpleName() + " build() {\n" +
-                "           if(serializer == null) {\n" +
-                "               serializer = new " + serializerQualifiedName + "();\n" +
-                "           }\n" +
-                "\n" +
-                "           return new " + storageImplName + "(serializer);\n" +
-                "       }\n" +
-                "   }\n" +
-                "}\n");
-
-        bw.close();
+        try {
+            StorageClassBuilder.builder(bw)
+                    .setPackage(packageName)
+                    .setClassName(storageImplName)
+                    .setStorageInterfaceName(entity.getSimpleName().toString())
+                    .setSerializer(serializerPackageName, serializerClassName, hasEmptyConstructor(serializerElement))
+                    .addMethods(methods)
+                    .build();
+        } finally {
+            bw.close();
+        }
     }
 
-    private TypeElement getMirrorForClass(DatabaseStorage databaseStorage) {
+    private List<StorageMethod> getStorageMethods(TypeElement element) {
+        List<StorageMethod> methods = new ArrayList<StorageMethod>();
+        for(Element enclosedElement : element.getEnclosedElements()) {
+            if(enclosedElement.getKind() == ElementKind.METHOD) {
+                methods.add(createStorageMethod((ExecutableElement) enclosedElement));
+            }
+        }
+        return methods;
+    }
+
+    private StorageMethod createStorageMethod(ExecutableElement methodElement) {
+        if(methodElement.getAnnotation(Insert.class) != null) {
+            return createInsertMethod(methodElement);
+        } else if(methodElement.getAnnotation(Replace.class) != null) {
+            return createReplaceMethod(methodElement);
+        } else if(methodElement.getAnnotation(Update.class) != null) {
+            return createUpdateMethod(methodElement);
+        } else if(methodElement.getAnnotation(Delete.class) != null) {
+            return createDeleteMethod(methodElement);
+        } else if(methodElement.getAnnotation(Select.class) != null) {
+            return createSelectMethod(methodElement);
+        }
+        return null;
+    }
+
+    private StorageMethod createSelectMethod(ExecutableElement methodElement) {
+        return null;
+    }
+
+    private StorageMethod createDeleteMethod(ExecutableElement methodElement) {
+        return null;
+    }
+
+    private StorageMethod createUpdateMethod(ExecutableElement methodElement) {
+        return null;
+    }
+
+    private StorageMethod createReplaceMethod(ExecutableElement methodElement) {
+        return null;
+    }
+
+    private StorageMethod createInsertMethod(ExecutableElement methodElement) {
+        return null;
+    }
+
+    private boolean hasEmptyConstructor(TypeElement element) {
+        for(Element enclosedElement : element.getEnclosedElements()) {
+            if(enclosedElement.getKind() == ElementKind.CONSTRUCTOR) {
+                ExecutableElement executableElement = (ExecutableElement) enclosedElement;
+                if(executableElement.getParameters().size() == 0)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private String getPackage(String qualifiedName) {
+        int lastDot = qualifiedName.lastIndexOf(".");
+        return qualifiedName.substring(0, lastDot);
+    }
+
+    private TypeElement getSerializerElement(DatabaseStorage databaseStorage) {
         try {
             databaseStorage.serializer();
             return null; //should never be here, this is an ugly hack :)
@@ -121,6 +167,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
     private TypeElement asTypeElement(TypeMirror typeMirror) {
         Types TypeUtils = processingEnv.getTypeUtils();
-        return (TypeElement)TypeUtils.asElement(typeMirror);
+        return (TypeElement) TypeUtils.asElement(typeMirror);
     }
+
 }

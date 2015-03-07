@@ -20,7 +20,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 
-public class ProcessingTypeElementConverter implements TypeElementConverter {
+class ProcessingTypeElementConverter implements TypeElementConverter {
 
     private final ProcessingEnvironment mProcessingEnvironment;
 
