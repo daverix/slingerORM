@@ -1,9 +1,11 @@
 package net.daverix.slingerorm.compiler;
 
+import java.io.IOException;
 import java.io.Writer;
+import java.util.Collection;
 
 interface StorageMethod {
-    String getQualifiedName();
+    void write(Writer writer) throws IOException;
 
-    void write(Writer writer);
+    Collection<String> getImports();
 }

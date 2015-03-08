@@ -17,7 +17,10 @@ package net.daverix.slingerorm.compiler;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 final class StorageClassBuilder {
@@ -60,11 +63,11 @@ final class StorageClassBuilder {
         return this;
     }
 
-    public StorageClassBuilder setSerializer(String packageName, String className, boolean emptyConstructor) {
-        if (packageName == null) throw new IllegalArgumentException("qualifiedName is null");
+    public StorageClassBuilder setSerializer(String qualifiedName, String className, boolean emptyConstructor) {
+        if (qualifiedName == null) throw new IllegalArgumentException("qualifiedName is null");
         if (className == null) throw new IllegalArgumentException("className is null");
 
-        serializer = new Serializer(packageName, className, emptyConstructor);
+        serializer = new Serializer(qualifiedName, className, emptyConstructor);
         return this;
     }
 
@@ -101,19 +104,19 @@ final class StorageClassBuilder {
 
     private void writeClass() throws IOException {
         writer.write("public class " + className + " implements " + storageInterfaceName + " {\n");
-        writer.write("    private " + serializer.getClassName() + " serializer;\n");
-        writer.write("\n");
+        writer.write("    private final " + serializer.getClassName() + " serializer;\n");
+        writeln();
         writer.write("    private " + className + "(" + serializer.getClassName() + " serializer) {\n");
         writer.write("        this.serializer = serializer;\n");
         writer.write("    }\n");
-        writer.write("\n");
+        writeln();
 
         writeMethods();
 
         writer.write("    public static Builder builder() {\n");
         writer.write("        return new Builder();\n");
         writer.write("    }\n");
-        writer.write("\n");
+        writeln();
 
         writeStorageBuilder();
 
@@ -135,18 +138,19 @@ final class StorageClassBuilder {
         Set<String> qualifiedNames = new HashSet<String>();
         qualifiedNames.add(serializer.getQualifiedName());
         for(StorageMethod storageMethod : storageMethods) {
-            qualifiedNames.add(storageMethod.getQualifiedName());
+            qualifiedNames.addAll(storageMethod.getImports());
         }
 
-        for(String importPackageName : qualifiedNames) {
-            writeImport(importPackageName);
+        List<String> sortedNames = new ArrayList<String>(qualifiedNames);
+        Collections.sort(sortedNames);
+        for(String qualifiedName : sortedNames) {
+            writeImport(qualifiedName);
         }
+        writeln();
     }
 
     private void writeImport(String importPackageName) throws IOException {
-        if (importPackageName.equals(packageName)) return;
-
-        writer.write(String.format("import %s;\n", packageName));
+        writer.write(String.format("import %s;\n", importPackageName));
     }
 
     private void writeln() throws IOException {
@@ -156,15 +160,15 @@ final class StorageClassBuilder {
     private void writeStorageBuilder() throws IOException {
         writer.write("    public static final class Builder {\n");
         writer.write("        private " + serializer.getClassName() + " serializer;\n");
-        writer.write("\n");
+        writeln();
         writer.write("        private Builder() {\n");
         writer.write("        }\n");
-        writer.write("\n");
+        writeln();
         writer.write("        public Builder serializer(" + serializer.getClassName() + " serializer) {\n");
         writer.write("            this.serializer = serializer;\n");
         writer.write("            return this;\n");
         writer.write("        }\n");
-        writer.write("\n");
+        writeln();
 
         writer.write("        public " + storageInterfaceName + " build() {\n");
         writer.write("            if(serializer == null) {\n");
@@ -174,7 +178,7 @@ final class StorageClassBuilder {
             writer.write("                throw new IllegalArgumentException(\"serializer not set\");\n");
         }
         writer.write("            }\n");
-        writer.write("\n");
+        writeln();
         writer.write("            return new " + className + "(serializer);\n");
         writer.write("        }\n");
 

@@ -42,37 +42,29 @@ final class ElementUtils {
         return fieldType.getKind();
     }
 
-    public static boolean isAccessable(Element element) {
+    public static boolean isAccessible(Element element) {
         Set<Modifier> modifiers = element.getModifiers();
 
-        for(Modifier modifier : modifiers) {
-            String name = modifier.name();
-
-            if("PRIVATE".equals(name) ||
-                    "PROTECTED".equals(name) ||
-                    "STATIC".equals(name) ||
-                    "TRANSIENT".equals(name)) {
-                return false;
-            }
-        }
-
-        return true;
+        return !modifiers.contains(Modifier.TRANSIENT) &&
+                !modifiers.contains(Modifier.PROTECTED) &&
+                !modifiers.contains(Modifier.STATIC) &&
+                !modifiers.contains(Modifier.PRIVATE);
     }
 
-    public static String getDeclaredTypeName(Element element) {
+    public static String getDeclaredTypeName(Element element) throws InvalidElementException {
         if(element == null) throw new IllegalArgumentException("element is null");
         return getTypeElement(element).getQualifiedName().toString();
     }
 
-    public static TypeElement getTypeElement(Element element) {
+    public static TypeElement getTypeElement(Element element) throws InvalidElementException {
         if(element == null) throw new IllegalArgumentException("element is null");
 
         TypeKind elementTypeKind = getTypeKind(element);
         if(elementTypeKind != TypeKind.DECLARED)
-            throw new IllegalArgumentException("Element is not a declared type: " + elementTypeKind);
+            throw new InvalidElementException("Element is not a declared type: " + elementTypeKind, element);
 
         if(!(element.asType() instanceof DeclaredType)) {
-            throw new IllegalStateException("mirrorType expected to be DeclaredType but was " + element.asType());
+            throw new InvalidElementException("mirrorType expected to be DeclaredType but was " + element.asType(), element);
         }
 
         final DeclaredType declaredType = (DeclaredType) element.asType();
@@ -102,11 +94,11 @@ final class ElementUtils {
         }
     }
 
-    public static List<ExecutableElement> getMethodsInTypeElement(TypeElement typeElement) {
+    public static List<ExecutableElement> getMethodsInTypeElement(TypeElement typeElement) throws InvalidElementException {
         return mapItems(filter(getElementsInTypeElement(typeElement), new Predicate<Element>() {
             @Override
             public boolean test(Element item) {
-                return item.getKind() == ElementKind.METHOD && isAccessable(item);
+                return item.getKind() == ElementKind.METHOD && isAccessible(item);
             }
         }), new Function<ExecutableElement, Element>() {
             @Override

@@ -18,7 +18,6 @@ package net.daverix.slingerorm.android.storage;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.android.model.ComplexEntity;
-import net.daverix.slingerorm.android.serialization.TestSerializer;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -44,9 +43,8 @@ public class ComplexEntityStorageTest {
     @Before
     public void setUp() {
         db = SQLiteDatabase.create(null);
-        sut = Slinger_ComplexEntityStorage.builder()
-                .serializer(new TestSerializer())
-                .build();
+        sut = Slinger_ComplexEntityStorage.builder().build();
+        sut.createTable(db);
     }
 
     @Test
