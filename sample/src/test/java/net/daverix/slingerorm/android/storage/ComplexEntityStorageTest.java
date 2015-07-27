@@ -43,7 +43,7 @@ public class ComplexEntityStorageTest {
     @Before
     public void setUp() {
         db = SQLiteDatabase.create(null);
-        sut = Slinger_ComplexEntityStorage.builder().build();
+        sut = SlingerComplexEntityStorage.builder().build();
         sut.createTable(db);
     }
 

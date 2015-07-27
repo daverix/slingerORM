@@ -102,7 +102,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         String qualifiedName = entity.getQualifiedName().toString();
         String packageName = getPackage(qualifiedName);
-        String storageImplName = "Slinger_" + entity.getSimpleName();
+        String storageImplName = "Slinger" + entity.getSimpleName();
 
         DatabaseStorage databaseStorage = entity.getAnnotation(DatabaseStorage.class);
         TypeElement serializerElement = getSerializerElement(databaseStorage);
