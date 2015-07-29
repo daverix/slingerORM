@@ -185,21 +185,28 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         checkUniqueAnnotations(Select.class, methodElement);
 
         Select selectAnnotation = methodElement.getAnnotation(Select.class);
-        String where = selectAnnotation.where();
-        String orderBy = selectAnnotation.orderBy() == null || selectAnnotation.orderBy().equals("") ? null : selectAnnotation.orderBy();
+        String where = selectAnnotation.where().equals("") ? null : selectAnnotation.where();
+        String orderBy = selectAnnotation.orderBy().equals("") ? null : selectAnnotation.orderBy();
 
-        //TODO: check if where contains correct variables specified in databaseEntity
+        int sqlArguments = getSqliteArgumentCount(where);
 
         TypeMirror returnType = methodElement.getReturnType();
         if(returnType.getKind() != TypeKind.DECLARED)
             throw new InvalidElementException("Method " + methodElement.getSimpleName() + " must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", methodElement);
 
-        TypeElement returnTypeElement = (TypeElement) ((DeclaredType) returnType).asElement();
 
         List<? extends VariableElement> parameters = methodElement.getParameters();
-        Collection<String> parameterGetters = getParameterNames(parameters);
+        int methodSqlParams = parameters.size() - 1;
+        if(methodSqlParams < 0) methodSqlParams = 0;
+
+        if(sqlArguments != methodSqlParams) {
+            throw new InvalidElementException(String.format("the sql where argument has %d arguments, the method contains %d", sqlArguments, methodSqlParams), methodElement);
+        }
+
+        Collection<String> parameterGetters = getWhereArgs(parameters);
         String parameterText = getParameterText(parameters);
 
+        TypeElement returnTypeElement = (TypeElement) ((DeclaredType) returnType).asElement();
         if(returnTypeElement.getAnnotation(DatabaseEntity.class) != null) {
             MapperDescription mapperDescription = getMapperDescription(returnTypeElement);
 
@@ -231,6 +238,33 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         }
     }
 
+    private List<String> getWhereArgs(List<? extends VariableElement> parameters) {
+        List<String> whereArgs = new ArrayList<String>();
+        for(int i=1;i<parameters.size();i++) {
+            VariableElement parameter = parameters.get(i);
+            if(ElementUtils.isString(parameter)) {
+                whereArgs.add(parameter.getSimpleName().toString());
+            }
+            else if(ElementUtils.getTypeKind(parameter) == TypeKind.BOOLEAN) {
+                whereArgs.add(parameter.getSimpleName() + " ? \"1\" : \"0\"");
+            }
+            else {
+                whereArgs.add("String.valueOf(" + parameter.getSimpleName() + ")");
+            }
+        }
+        return whereArgs;
+    }
+
+    private int getSqliteArgumentCount(String where) {
+        if(where == null) return 0;
+
+        int count = 0;
+        for(int i=0;i<where.length();i++) {
+            if(where.charAt(i) == '?') count++;
+        }
+        return count;
+    }
+
     private Collection<String> getParameterNames(List<? extends VariableElement> parameters) {
         if(parameters == null) throw new IllegalArgumentException("parameters is null");
 
@@ -244,17 +278,13 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     private String getParameterText(List<? extends VariableElement> parameters) throws InvalidElementException {
         if(parameters == null) throw new IllegalArgumentException("parameters is null");
 
-        StringBuilder builder = new StringBuilder();
+        String[] params = new String[parameters.size()];
         for(int i=0;i<parameters.size();i++) {
             VariableElement variableElement = parameters.get(i);
             String typeName = getTypeName(variableElement.asType().getKind(), variableElement);
-            builder.append(typeName).append(" ").append(variableElement.getSimpleName());
-
-            if(i < parameters.size() - 1) {
-                builder.append(", ");
-            }
+            params[i] = typeName + " " + variableElement.getSimpleName();
         }
-        return builder.toString();
+        return String.join(", ", params);
     }
 
     private String getTypeName(TypeKind typeKind, Element element) throws InvalidElementException {

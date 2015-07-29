@@ -35,7 +35,7 @@ public @interface DatabaseEntity {
      * Use this property if you can't annotate a field in a superclass
      * @return the primary key
      */
-    String primaryKey() default "";
+    String primaryKeyField() default "";
 
     /**
      * If you have other than native types, you need to set a custom serializer

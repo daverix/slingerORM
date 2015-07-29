@@ -27,7 +27,7 @@ public class SelectMultipleMethod implements StorageMethod {
     private final String returnTypeName;
     private final String parameterText;
     private final String where;
-    private final Collection<String> parameterGetters;
+    private final Collection<String> whereArgs;
     private final String orderBy;
     private final MapperDescription mapperDescription;
 
@@ -36,7 +36,7 @@ public class SelectMultipleMethod implements StorageMethod {
                                 String returnTypeName,
                                 String parameterText,
                                 String where,
-                                Collection<String> parameterGetters,
+                                Collection<String> whereArgs,
                                 String orderBy,
                                 MapperDescription mapperDescription) {
         this.methodName = methodName;
@@ -44,7 +44,7 @@ public class SelectMultipleMethod implements StorageMethod {
         this.returnTypeName = returnTypeName;
         this.parameterText = parameterText;
         this.where = where;
-        this.parameterGetters = parameterGetters;
+        this.whereArgs = whereArgs;
         this.orderBy = orderBy;
         this.mapperDescription = mapperDescription;
     }
@@ -63,8 +63,9 @@ public class SelectMultipleMethod implements StorageMethod {
         writer.write("            if(!cursor.moveToFirst()) return items;\n");
         writer.write("            \n");
         writer.write("            do {\n");
-        writer.write("              " + entityName + " item = new " + entityName + "();\n");
-        writer.write("              " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
+        writer.write("                " + entityName + " item = new " + entityName + "();\n");
+        writer.write("                " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
+        writer.write("                items.add(item);\n");
         writer.write("            } while(cursor.moveToNext());\n");
         writer.write("            return items;\n");
         writer.write("        } finally {\n");
@@ -81,7 +82,7 @@ public class SelectMultipleMethod implements StorageMethod {
     }
 
     private String createArguments() {
-        return "new String[]{}";
+        return "new String[]{" + String.join(", ", whereArgs) +  "}";
     }
 
     @Override

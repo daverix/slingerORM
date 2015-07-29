@@ -107,4 +107,16 @@ final class ElementUtils {
             }
         });
     }
+
+    public static boolean isString(Element element) {
+        TypeKind typeKind = getTypeKind(element);
+        if(typeKind == TypeKind.DECLARED) {
+            final DeclaredType declaredType = (DeclaredType) element.asType();
+            final TypeElement typeElement = (TypeElement) declaredType.asElement();
+            final String typeName = typeElement.getQualifiedName().toString();
+            return typeName.equals(ElementUtils.TYPE_STRING);
+        }
+
+        return false;
+    }
 }

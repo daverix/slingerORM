@@ -114,7 +114,7 @@ class DatabaseEntityModel {
         StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(getTableName()).append("(");
         
         DatabaseEntity entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        String primaryKey = entityAnnotation.primaryKey();
+        String primaryKey = entityAnnotation.primaryKeyField();
 
         boolean primaryKeySet = false;
 
@@ -162,7 +162,7 @@ class DatabaseEntityModel {
         if(validFields == null) throw new IllegalArgumentException("validFields");
 
         DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        String key = annotation.primaryKey();
+        String key = annotation.primaryKeyField();
         if(key == null || key.equals(""))
             return null;
 
@@ -576,31 +576,31 @@ class DatabaseEntityModel {
         List<ExecutableElement> methodsInDatabaseEntityElement = ElementUtils.getMethodsInTypeElement(databaseTypeElement);
         ExecutableElement method = findMethodByFieldNameAndSetFieldAnnotation(methodsInDatabaseEntityElement, field.getSimpleName().toString());
         if(method != null) {
-            return findSetterMethodFromParameter(serializerTypeElement, method);
+            return findSetterMethodFromParameter(serializerTypeElement, method, field);
         }
 
         method = findMethodByFieldNameOnly(methodsInDatabaseEntityElement, field.getSimpleName().toString(), "set");
         if(method != null) {
-            return findSetterMethodFromParameter(serializerTypeElement, method);
+            return findSetterMethodFromParameter(serializerTypeElement, method, field);
         }
 
         if (!ElementUtils.isAccessible(field))
             throw new InvalidElementException("No get method or a public field for " + field.getSimpleName() + " in " + databaseTypeElement.getSimpleName(), field);
 
-        return new WrappedFieldMethod(field.getSimpleName().toString() + " = ", findCursorMethod(serializerTypeElement, field), "");
+        return new WrappedFieldMethod(field.getSimpleName().toString() + " = ", findCursorMethod(serializerTypeElement, field, field), "");
     }
 
-    private FieldMethod findSetterMethodFromParameter(TypeElement serializerTypeElement, ExecutableElement method) throws InvalidElementException {
+    private FieldMethod findSetterMethodFromParameter(TypeElement serializerTypeElement, ExecutableElement method, Element field) throws InvalidElementException {
         if(method == null) throw new IllegalArgumentException("method is null");
 
         List<? extends VariableElement> typeParameters = method.getParameters();
         if(typeParameters.size() != 1)
             throw new InvalidElementException(String.format("method has %d parameters, only 1 parameter supported!", typeParameters.size()), method);
 
-        return new WrappedFieldMethod(method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, typeParameters.get(0)), ")");
+        return new WrappedFieldMethod(method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, typeParameters.get(0), field), ")");
     }
 
-    private FieldMethod findCursorMethod(TypeElement serializerTypeElement, Element element) throws InvalidElementException {
+    private FieldMethod findCursorMethod(TypeElement serializerTypeElement, Element element, Element field) throws InvalidElementException {
         if(element == null) throw new IllegalArgumentException("element is null");
 
         final TypeKind fieldTypeKind = ElementUtils.getTypeKind(element);
@@ -608,27 +608,27 @@ class DatabaseEntityModel {
 
         switch (objectType) {
             case BOOLEAN:
-                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(element) + ") == 1");
+                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(field) + ") == 1");
             case DOUBLE:
-                return new FieldMethodImpl("cursor.getDouble(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getDouble(" + getColumnIndex(field) + ")");
             case FLOAT:
-                return new FieldMethodImpl("cursor.getFloat(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getFloat(" + getColumnIndex(field) + ")");
             case INT:
-                return new FieldMethodImpl("cursor.getInt(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getInt(" + getColumnIndex(field) + ")");
             case LONG:
-                return new FieldMethodImpl("cursor.getLong(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getLong(" + getColumnIndex(field) + ")");
             case SHORT:
-                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(field) + ")");
             case STRING:
-                return new FieldMethodImpl("cursor.getString(" + getColumnIndex(element) + ")");
+                return new FieldMethodImpl("cursor.getString(" + getColumnIndex(field) + ")");
             case OTHER:
-                return findSetterInSerializer(serializerTypeElement, element);
+                return findSetterInSerializer(serializerTypeElement, element, field);
             default:
                 throw new UnsupportedOperationException("this should not be called!");
         }
     }
 
-    private FieldMethod findSetterInSerializer(TypeElement serializerTypeElement, Element element) throws InvalidElementException {
+    private FieldMethod findSetterInSerializer(TypeElement serializerTypeElement, Element element, Element field) throws InvalidElementException {
         List<ExecutableElement> methodsInSerializer = getDeserializeMethodsInSerializer(serializerTypeElement);
         final TypeElement typeElement = ElementUtils.getTypeElement(element);
 
@@ -652,7 +652,7 @@ class DatabaseEntityModel {
         if(!typeKind.isPrimitive() && getObjectTypeForElement(typeKind, parameter) != ObjectType.STRING)
             throw new InvalidElementException("Only primitive types are supported as parameter in deserialize methods", method);
 
-        return new WrappedFieldMethod("serializer." + method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, parameter), ")");
+        return new WrappedFieldMethod("serializer." + method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, parameter, field), ")");
     }
 
     private String getColumnIndex(Element field) throws InvalidElementException {

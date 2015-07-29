@@ -65,7 +65,7 @@ class SelectSingleMethod implements StorageMethod {
     }
 
     private String createArguments() {
-        return "new String[]{}";
+        return "new String[]{" + String.join(", ", whereArgs) +  "}";
     }
 
     @Override

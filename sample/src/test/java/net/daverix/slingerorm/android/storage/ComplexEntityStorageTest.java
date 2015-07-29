@@ -25,14 +25,11 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.IsNot.not;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.core.IsNull.nullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
@@ -52,7 +49,7 @@ public class ComplexEntityStorageTest {
         final long expectedId = 42;
         final String expectedName = "David";
         final double expectedValue = 1.831234d;
-        final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
+        final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue, true);
         entity.setIgnoreThisField("ignore this");
 
         try {
@@ -63,23 +60,25 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        final List<ComplexEntity> actual = sut.getComplexEntities(db, true);
+        assertThat(db.query(false, "Complex", null, null, null, null, null, null, null).getCount()).isNotEqualTo(0);
 
-        assertThat(actual, is(notNullValue()));
-        assertThat(actual.size(), is(not(equalTo(0))));
-        assertThat(actual.get(0).getId(), is(equalTo(expectedId)));
-        assertThat(actual.get(0).getEntityName(), is(equalTo(expectedName)));
-        assertThat(actual.get(0).getValue(), is(equalTo(expectedValue)));
-        assertThat(actual.get(0).getIgnoreThisField(), is(nullValue()));
+        final ComplexEntity actual = sut.getEntity(db, expectedId);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual.getId()).isEqualTo(expectedId);
+        assertThat(actual.getEntityName()).isEqualTo(expectedName);
+        assertThat(actual.getValue()).isWithin(0.000001d).of(expectedValue);
+        assertThat(actual.getIgnoreThisField()).isNull();
+        assertThat(actual.isComplex()).isTrue();
     }
 
     @Test
-    public void shouldSaveAndUpdateObject() throws Exception {
+    public void shouldInsertAndUpdateObject() throws Exception {
         final long expectedId = 42;
         final String expectedName = "David";
         final double expectedValue = 1.831234d;
-        final ComplexEntity oldEntity = createEntity(expectedId, "Adam", 2);
-        final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue);
+        final ComplexEntity oldEntity = createEntity(expectedId, "Adam", 2, false);
+        final ComplexEntity entity = createEntity(expectedId, expectedName, expectedValue, true);
 
         try {
             db.beginTransaction();
@@ -90,21 +89,64 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        final List<ComplexEntity> actual = sut.getComplexEntities(db, true);
+        final ComplexEntity actual = sut.getEntity(db, expectedId);
 
-        assertThat(actual, is(notNullValue()));
-        assertThat(actual.size(), is(not(equalTo(0))));
-        assertThat(actual.get(0).getId(), is(equalTo(expectedId)));
-        assertThat(actual.get(0).getEntityName(), is(equalTo(expectedName)));
-        assertThat(actual.get(0).getValue(), is(equalTo(expectedValue)));
-        assertThat(actual.get(0).getIgnoreThisField(), is(nullValue()));
+        assertThat(actual).isNotNull();
+        assertThat(actual.getId()).isEqualTo(expectedId);
+        assertThat(actual.getEntityName()).isEqualTo(expectedName);
+        assertThat(actual.getValue()).isWithin(0.000001d).of(expectedValue);
+        assertThat(actual.getIgnoreThisField()).isNull();
+        assertThat(actual.isComplex()).isTrue();
     }
 
-    private ComplexEntity createEntity(long id, String name, double value) {
-        ComplexEntity entity =new ComplexEntity();
+    @Test
+    public void ShouldInsertTwoItemsAndGetThemBack() throws Exception {
+        final ComplexEntity first = createEntity(42, "Adam", 2, false);
+        final ComplexEntity second = createEntity(1337, "David", 3, false);
+
+        try {
+            db.beginTransaction();
+            sut.insert(db, first);
+            sut.insert(db, second);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        final List<ComplexEntity> actual = sut.getComplexEntities(db, false);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual).isNotEmpty();
+        assertThat(actual).containsExactlyElementsIn(Arrays.asList(first, second));
+    }
+
+    @Test
+    public void ShouldInsertOneComplexAndOneNotComplexAndGetComplexBack() throws Exception {
+        final ComplexEntity first = createEntity(42, "Adam", 2, false);
+        final ComplexEntity second = createEntity(1337, "David", 3, true);
+
+        try {
+            db.beginTransaction();
+            sut.insert(db, first);
+            sut.insert(db, second);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        final List<ComplexEntity> actual = sut.getComplexEntities(db, true);
+
+        assertThat(actual).isNotNull();
+        assertThat(actual).isNotEmpty();
+        assertThat(actual).containsExactlyElementsIn(Collections.singletonList(second));
+    }
+
+    private ComplexEntity createEntity(long id, String name, double value, boolean complex) {
+        ComplexEntity entity = new ComplexEntity();
         entity.setId(id);
         entity.setEntityName(name);
         entity.setValue(value);
+        entity.setComplex(complex);
         return entity;
     }
 }

@@ -17,7 +17,7 @@ package net.daverix.slingerorm.android.model;
 
 import net.daverix.slingerorm.annotation.*;
 
-@DatabaseEntity(name = "Complex", primaryKey = "_id")
+@DatabaseEntity(name = "Complex", primaryKeyField = "_id")
 public class ComplexEntity extends AbstractComplexEntity {
     @FieldName("name") private String _name;
     @FieldName("value") private double _value;
@@ -63,5 +63,41 @@ public class ComplexEntity extends AbstractComplexEntity {
 
     public void setIgnoreThisField(String ignoreThisField) {
         _ignoreThisField = ignoreThisField;
+    }
+
+    @Override
+    public String toString() {
+        return "ComplexEntity{" +
+                "_name='" + _name + '\'' +
+                ", _value=" + _value +
+                ", _complex=" + _complex +
+                ", _ignoreThisField='" + _ignoreThisField + '\'' +
+                "} " + super.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ComplexEntity)) return false;
+
+        ComplexEntity that = (ComplexEntity) o;
+
+        if (Double.compare(that._value, _value) != 0) return false;
+        if (_complex != that._complex) return false;
+        if (_name != null ? !_name.equals(that._name) : that._name != null) return false;
+        return !(_ignoreThisField != null ? !_ignoreThisField.equals(that._ignoreThisField) : that._ignoreThisField != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = _name != null ? _name.hashCode() : 0;
+        temp = Double.doubleToLongBits(_value);
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (_complex ? 1 : 0);
+        result = 31 * result + (_ignoreThisField != null ? _ignoreThisField.hashCode() : 0);
+        return result;
     }
 }
