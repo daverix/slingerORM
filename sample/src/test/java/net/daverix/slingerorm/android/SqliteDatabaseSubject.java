@@ -1,5 +1,6 @@
 package net.daverix.slingerorm.android;
 
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.google.common.truth.FailureStrategy;
@@ -35,16 +36,29 @@ public class SqliteDatabaseSubject extends Subject<SqliteDatabaseSubject, SQLite
         }
 
         public void isEmpty() {
-            int count = database.query(false, getSubject(), null, null, null, null, null, null, null).getCount();
-            if(count > 0) {
-                fail(String.format("is not empty (got %d items)", count));
+            Cursor cursor = null;
+            try {
+                cursor = database.query(false, getSubject(), null, null, null, null, null, null, null);
+
+                if(cursor.getCount() > 0) {
+                    fail(String.format("is not empty (got %d items)", cursor.getCount()));
+                }
+            } finally {
+                if(cursor != null) cursor.close();
             }
+
         }
 
         public void isNotEmpty() {
-            int count = database.query(false, getSubject(), null, null, null, null, null, null, null).getCount();
-            if(count == 0) {
-                fail("is empty");
+            Cursor cursor = null;
+            try {
+                cursor = database.query(false, getSubject(), null, null, null, null, null, null, null);
+
+                if(cursor.getCount() == 0) {
+                    fail("is empty");
+                }
+            } finally {
+                if(cursor != null) cursor.close();
             }
         }
     }
