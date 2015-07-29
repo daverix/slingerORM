@@ -41,7 +41,7 @@ When writing your code for your database layer in Android you will have a lot of
 
 Writing that becomes tedious when having over hundred fields in your database table that you want to
 have mapped. SlingerORM solves this problem by looking at annotations for your class that represents
-your database table. The bare minimum you can annotate is this:
+your database table and generates the code for you! The bare minimum you can annotate is this:
 
     @DatabaseEntity
     public class ExampleEntity {
@@ -85,7 +85,7 @@ You can also change the name of the field in the database table by annotating th
       }
     }
 
-SlingerORM generates this code with two annotation processors. The first generates a mapper class
+SlingerORM generates the code using two annotation processors. The first generates a mapper class
 that you can use to map the tedious part in the example above:
 
     private Mapper<ExampleEntity> mapper;
