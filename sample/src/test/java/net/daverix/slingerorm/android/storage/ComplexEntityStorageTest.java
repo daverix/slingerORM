@@ -29,7 +29,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
+import static net.daverix.slingerorm.android.SqliteDatabaseSubject.database;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE)
@@ -60,16 +62,17 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        assertThat(db.query(false, "Complex", null, null, null, null, null, null, null).getCount()).isNotEqualTo(0);
+        assertAbout(database()).that(db).withTable("Complex").hasRowCountThat().isNotEqualTo(0);
 
         final ComplexEntity actual = sut.getEntity(db, expectedId);
 
-        assertThat(actual).isNotNull();
-        assertThat(actual.getId()).isEqualTo(expectedId);
-        assertThat(actual.getEntityName()).isEqualTo(expectedName);
-        assertThat(actual.getValue()).isWithin(0.000001d).of(expectedValue);
-        assertThat(actual.getIgnoreThisField()).isNull();
-        assertThat(actual.isComplex()).isTrue();
+        assertThat(actual).named("entity").isNotNull();
+
+        assertThat(actual.getId()).named("id").isEqualTo(expectedId);
+        assertThat(actual.getEntityName()).named("entityName").isEqualTo(expectedName);
+        assertThat(actual.getValue()).named("value").isWithin(0.000001d).of(expectedValue);
+        assertThat(actual.getIgnoreThisField()).named("ignore").isNull();
+        assertThat(actual.isComplex()).named("complex").isTrue();
     }
 
     @Test
@@ -91,12 +94,12 @@ public class ComplexEntityStorageTest {
 
         final ComplexEntity actual = sut.getEntity(db, expectedId);
 
-        assertThat(actual).isNotNull();
-        assertThat(actual.getId()).isEqualTo(expectedId);
-        assertThat(actual.getEntityName()).isEqualTo(expectedName);
-        assertThat(actual.getValue()).isWithin(0.000001d).of(expectedValue);
-        assertThat(actual.getIgnoreThisField()).isNull();
-        assertThat(actual.isComplex()).isTrue();
+        assertThat(actual).named("entity").isNotNull();
+        assertThat(actual.getId()).named("id").isEqualTo(expectedId);
+        assertThat(actual.getEntityName()).named("entityName").isEqualTo(expectedName);
+        assertThat(actual.getValue()).named("value").isWithin(0.000001d).of(expectedValue);
+        assertThat(actual.getIgnoreThisField()).named("ignore").isNull();
+        assertThat(actual.isComplex()).named("complex").isTrue();
     }
 
     @Test
