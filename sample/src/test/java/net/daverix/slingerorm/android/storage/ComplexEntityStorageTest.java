@@ -62,7 +62,7 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        assertAbout(database()).that(db).withTable("Complex").hasRowCountThat().isNotEqualTo(0);
+        assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
 
         final ComplexEntity actual = sut.getEntity(db, expectedId);
 
@@ -73,6 +73,18 @@ public class ComplexEntityStorageTest {
         assertThat(actual.getValue()).named("value").isWithin(0.000001d).of(expectedValue);
         assertThat(actual.getIgnoreThisField()).named("ignore").isNull();
         assertThat(actual.isComplex()).named("complex").isTrue();
+    }
+
+    @Test
+    public void shouldInsertAndRemoveItem() throws Exception {
+        final long expectedId = 42;
+        final ComplexEntity entity = createEntity(expectedId, "david", 2, true);
+
+        sut.insert(db, entity);
+        assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
+
+        sut.delete(db, entity);
+        assertAbout(database()).that(db).withTable("Complex").isEmpty();
     }
 
     @Test

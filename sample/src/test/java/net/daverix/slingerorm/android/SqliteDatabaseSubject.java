@@ -3,7 +3,6 @@ package net.daverix.slingerorm.android;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.google.common.truth.FailureStrategy;
-import com.google.common.truth.IntegerSubject;
 import com.google.common.truth.Subject;
 import com.google.common.truth.SubjectFactory;
 
@@ -35,9 +34,18 @@ public class SqliteDatabaseSubject extends Subject<SqliteDatabaseSubject, SQLite
             this.database = database;
         }
 
-        public IntegerSubject hasRowCountThat() {
+        public void isEmpty() {
             int count = database.query(false, getSubject(), null, null, null, null, null, null, null).getCount();
-            return new IntegerSubject(failureStrategy, count);
+            if(count > 0) {
+                fail(String.format("is not empty (got %d items)", count));
+            }
+        }
+
+        public void isNotEmpty() {
+            int count = database.query(false, getSubject(), null, null, null, null, null, null, null).getCount();
+            if(count == 0) {
+                fail("is empty");
+            }
         }
     }
 }
