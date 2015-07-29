@@ -6,7 +6,42 @@ SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simpli
 Usage
 -----
 
-SlingerORM looks at all classes annotated with the DatabaseEntity annotation and then compiles and generates a specific storage class for each of the annotated classes. The bare minimum of an entity looks like this:
+When writing your code for your database layer in Android you will have a lot of code like this:
+
+    public void insert(SQLiteDatabase db, ExampleEntity item) {
+        if(db == null) throw new IllegalArgumentException("db is null");
+        if(item == null) throw new IllegalArgumentException("item is null");
+
+        ContentValues values = new ContentValues();
+        values.put("id", item.getId());
+        values.put("name", item.getName());
+        db.insertOrThrow("ExampleEntity", null, values);
+    }
+
+    public ExampleEntity getEntity(SQLiteDatabase db, long id) {
+        Cursor cursor = null;
+        try {
+            cursor = db.query(false, "ExampleEntity", new String[] {
+                "id",
+                "name"
+            }, "_id = ?", new String[] {
+                String.valueOf(id)
+            }, null, null, null, "1");
+
+            if(!cursor.moveToFirst()) return null;
+
+            ExampleEntity item = new ExampleEntity();
+            item.setId(cursor.getLong(0));
+            item.setName(cursor.getString(1));
+            return item;
+        } finally {
+            if(cursor != null) cursor.close();
+        }
+    }
+
+Writing that becomes tedious when having over hundred fields in your database table that you want to
+have mapped. SlingerORM solves this problem by looking at annotations for your class that represents
+your database table. The bare minimum you can annotate is this:
 
     @DatabaseEntity
     public class ExampleEntity {
@@ -15,7 +50,11 @@ SlingerORM looks at all classes annotated with the DatabaseEntity annotation and
       public String Name;
     }
 
-The DatabaseEntityProcessor will look at all the fields of the class and use the name of the field as a column name in the database table. If you annotate a field with @FieldName("custom name") you can change the name for the column in the database. By default it will use getters and setters starting with set/get and then the field name. This can be changed by annotating your get method with @GetField("fieldName") and your set method with @SetField("fieldName"). If no getters and setters are found and the fields are public, it will use the fields directly. You must always set what field is the primary key. Currently Only a single field is supported for primary key.
+SlingerORM will first look after getters and setters that match the fields, if it can't find any it
+will try to access the fields directly. If you have the fields private with a name that doesn't
+match the setter or getter your can annotate the methods to tell SlingerORM which fields are used.
+You can also change the name of the field in the database table by annotating the field with
+"@FieldName":
 
     @DatabaseEntity
     public class ExampleEntity {
@@ -46,51 +85,113 @@ The DatabaseEntityProcessor will look at all the fields of the class and use the
       }
     }
 
-To save entities to the database, use the provided StorageFactory to get a Storage. The storage has methods for inserting, updating, deleting and querying the database. The SqliteDatabaseConnection is specifically made for Android but you can use the storage in plain java if you implement the DatabaseConnection interface.
+SlingerORM generates this code with two annotation processors. The first generates a mapper class
+that you can use to map the tedious part in the example above:
 
-    DatabaseConnection db = new SqliteDatabaseConnection(SQLiteDatabase.create(new File("example.db")));
-    StorageFactory storageFactory = new GeneratedStorageFactory();
-    
-    Storage<ExampleEntity> storage = storageFactory.build(ExampleEntity.class);
-    storage.createTable(db, ExampleEntity.class);
-    
-    ExampleEntity entity = new ExampleEntity();
-    entity.setName("David");
-    try {
-        db.beginTransaction();
-        storage.insert(db, entity);
-        db.setTransactionSuccessful();
-    } finally {
-        db.endTransaction();
-        db.close();    
-    }  
+    private Mapper<ExampleEntity> mapper;
 
-If you use Dagger there is a SlingerDaggerModule you can use to get the StorageFactory and all other dependencies:
+    public Storage() {
+        this.mapper = new ExampleEntityMapper();
+    }
 
-    ObjectGraph og = ObjectGraph.create(new SlingerDaggerModule());
-    StorageFactory storageFactory = og.get(StorageFactory.class);
+    public void insert(SQLiteDatabase db, ExampleEntity item) {
+        if(db == null) throw new IllegalArgumentException("db is null");
+        if(item == null) throw new IllegalArgumentException("item is null");
 
-You should also consider creating your own Dagger Module and get the Storage implementation directly:
+        ContentValues values = new ContentValues();
+        mapper.mapValues(item, values);
+        db.insertOrThrow(mapper.getTableName(), null, values);
+    }
 
-    @Module(library = true, includes = SlingerDaggerModule.class)
-    public class MyCustomModule {
-        @Provides @Singleton
-        public Storage<MyEntity> provideMyEntityStorage(StorageFactory factory) {
-            return factory.build(MyEntity.class);        
+    public ExampleEntity getEntity(SQLiteDatabase db, long id) {
+        Cursor cursor = null;
+        try {
+            cursor = db.query(false, mapper.getTableName(), mapper.getFieldNames(), "_id = ?",
+                    new String[] {
+                String.valueOf(id)
+            }, null, null, null, "1");
+
+            if(!cursor.moveToFirst()) return null;
+
+            ExampleEntity item = new ExampleEntity();
+            mapper.mapItem(cursor, item);
+            return item;
+        } finally {
+            if(cursor != null) cursor.close();
         }
     }
 
-This will make it possible to inject the storage where you need it and remove even more boiler plate code!
+It doesn't matter if it was 2 or hundred fields, this takes care of all the mapping for us! But
+there are still some tedious code to write! The second annotation processor generates the whole
+storage class by implementing your own interface with annotated methods. Here is our storage like
+above but with an interface instead:
+
+    @DatabaseStorage
+    public interface ExampleEntityStorage {
+        @Insert
+        void insert(SQLiteDatabase db, ExampleEntity complexEntity);
+
+        @Select(where = "_id = ?")
+        ExampleEntity getEntity(SQLiteDatabase db, long id);
+    }
+
+To get the implementation simply add "Slinger" before the name of the interface:
+
+    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder().build();
+
+You might wonder where the mapper went? It is used inside the storage implementation and can be set
+in the builder if you either want to make your own mapper (a rare case) or you want to provide
+a serializer for the mapper (for fields that otherwise can't be mapped):
+
+    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
+        .exampleEntityMapper(new ExampleEntityMapper())
+        .build();
+
+To use a custom serializer, you will have to create a new class and add "@SerializeType" and
+"@DeserializeType" annotations:
+
+    public class MyCustomSerializer {
+        @DeserializeType
+        public Date deserializeDate(long time) {
+            return new Date(time);
+        }
+
+        @SerializeType
+        public long serializeDate(Date date) {
+            return date.getTime();
+        }
+    }
+
+Then in your database entity, you will have to set the serializer in the annotation:
+
+    @DatabaseEntity(serializer = MyCustomSerializer.class)
+    public class ExampleEntity {
+      @PrimaryKey
+      public String Id;
+      public Date Created;
+    }
+
+The mapper will then require you to pass an instance of this class in the constructor:
+
+    Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
+
+    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
+        .exampleEntityMapper(mapper)
+        .build();
+
+And there you have it! Check the sample module in the source code for more examples.
 
 Download
 --------
 
-The project is currently in an alpha stage. Will upload it to Maven Central eventually. In the meantime you have to call the following code to create a local repository:
+The project is currently in an alpha stage. Will upload it to Maven Central eventually. In the
+meantime you have to call the following code to create a local repository:
 
     ./gradlew build uploadArchives
 
 
-You could change the build script so the build is placed in your local maven repository, right now it's placed in the pkg/ folder in the root of the project.
+You could change the build script so the build is placed in your local maven repository, right now
+it's placed in the pkg/ folder in the root of the project.
 
 License
 -------
