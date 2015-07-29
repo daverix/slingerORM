@@ -4,41 +4,34 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
 
 class ReplaceMethod implements StorageMethod {
     private final String methodName;
     private String databaseEntityTypeName;
     private final String databaseEntityTypeQualifiedName;
-    private final String tableName;
-    private final Map<String, String> entityProperties;
+    private final MapperDescription mapperDescription;
 
     public ReplaceMethod(String methodName,
                          String databaseEntityTypeName,
                          String databaseEntityTypeQualifiedName,
-                         String tableName,
-                         Map<String, String> entityProperties) {
+                         MapperDescription mapperDescription) {
         this.methodName = methodName;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;
-        this.tableName = tableName;
-        this.entityProperties = entityProperties;
+
+        this.mapperDescription = mapperDescription;
     }
 
     @Override
     public void write(Writer writer) throws IOException {
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " entity) {\n");
+        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " item) {\n");
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
-        writer.write("        if(entity == null) throw new IllegalArgumentException(\"entity is null\");\n");
+        writer.write("        if(item == null) throw new IllegalArgumentException(\"entity is null\");\n");
         writer.write("\n");
         writer.write("        ContentValues values = new ContentValues();\n");
-
-        for(String key : entityProperties.keySet()) {
-            writer.write("        values.put(\"" + key + "\", " + entityProperties.get(key) + ");\n");
-        }
-
-        writer.write("        db.replaceOrThrow(\"" + tableName + "\", null, values);\n");
+        writer.write("        " + mapperDescription.getVariableName() + ".mapValues(item, values);\n");
+        writer.write("        db.replaceOrThrow(" + mapperDescription.getVariableName() + ".getTableName(), null, values);\n");
         writer.write("    }\n");
         writer.write("\n");
     }
@@ -48,5 +41,10 @@ class ReplaceMethod implements StorageMethod {
         return Arrays.asList("android.database.sqlite.SQLiteDatabase",
                 "android.content.ContentValues",
                 databaseEntityTypeQualifiedName);
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }

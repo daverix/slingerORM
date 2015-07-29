@@ -7,31 +7,34 @@ import java.util.Collection;
 
 public class SelectMultipleMethod implements StorageMethod {
     private final String methodName;
-    private final String tableName;
+    private final String entityName;
     private final String returnTypeName;
     private final String parameterText;
     private final String where;
     private final Collection<String> parameterGetters;
     private final String orderBy;
+    private final MapperDescription mapperDescription;
 
     public SelectMultipleMethod(String methodName,
-                                String tableName,
+                                String entityName,
                                 String returnTypeName,
                                 String parameterText,
                                 String where,
-                                Collection<String> parameterGetters, String orderBy) {
+                                Collection<String> parameterGetters,
+                                String orderBy,
+                                MapperDescription mapperDescription) {
         this.methodName = methodName;
-        this.tableName = tableName;
+        this.entityName = entityName;
         this.returnTypeName = returnTypeName;
         this.parameterText = parameterText;
         this.where = where;
         this.parameterGetters = parameterGetters;
         this.orderBy = orderBy;
+        this.mapperDescription = mapperDescription;
     }
 
     @Override
     public void write(Writer writer) throws IOException {
-        String columns = createColumns();
         String args = createArguments();
         String orderByText = createOrderBy();
 
@@ -39,8 +42,15 @@ public class SelectMultipleMethod implements StorageMethod {
         writer.write("    public " + returnTypeName + " " + methodName + "(" + parameterText + ") {\n");
         writer.write("        Cursor cursor = null;\n");
         writer.write("        try {\n");
-        writer.write("            cursor = db.query(false, \"" + tableName + "\", " + columns + ", \"" + where + "\", " + args + ", null, null, " + orderByText + ", null);\n");
-        writer.write("            return null;\n");
+        writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), \"" + where + "\", " + args + ", null, null, " + orderByText + ", null);\n");
+        writer.write("            " + returnTypeName + " items = new ArrayList<" + entityName + ">();\n");
+        writer.write("            if(!cursor.moveToFirst()) return items;\n");
+        writer.write("            \n");
+        writer.write("            do {\n");
+        writer.write("              " + entityName + " item = new " + entityName + "();\n");
+        writer.write("              " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
+        writer.write("            } while(cursor.moveToNext());\n");
+        writer.write("            return items;\n");
         writer.write("        } finally {\n");
         writer.write("            if(cursor != null) cursor.close();\n");
         writer.write("        }\n");
@@ -52,10 +62,6 @@ public class SelectMultipleMethod implements StorageMethod {
         if(orderBy == null) return "null";
 
         return "\"" + orderBy + "\"";
-    }
-
-    private String createColumns() {
-        return "null";
     }
 
     private String createArguments() {
@@ -70,5 +76,10 @@ public class SelectMultipleMethod implements StorageMethod {
                 "java.util.List",
                 "java.util.ArrayList"
         );
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }

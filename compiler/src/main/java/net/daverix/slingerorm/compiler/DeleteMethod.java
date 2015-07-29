@@ -7,24 +7,24 @@ import java.util.Collection;
 
 class DeleteMethod implements StorageMethod {
     private final String methodName;
-    private final String tableName;
     private final String databaseEntityTypeName;
     private final String databaseEntityTypeQualifiedName;
     private final String where;
     private final Collection<String> whereGetters;
+    private final MapperDescription mapperDescription;
 
     DeleteMethod(String methodName,
-                 String tableName,
                  String databaseEntityTypeName,
                  String databaseEntityTypeQualifiedName,
                  String where,
-                 Collection<String> whereGetters) {
+                 Collection<String> whereGetters,
+                 MapperDescription mapperDescription) {
         this.methodName = methodName;
-        this.tableName = tableName;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;
         this.where = where;
         this.whereGetters = whereGetters;
+        this.mapperDescription = mapperDescription;
     }
 
     @Override
@@ -32,13 +32,13 @@ class DeleteMethod implements StorageMethod {
         if(writer == null) throw new IllegalArgumentException("writer is null");
 
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " entity) {\n");
+        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " item) {\n");
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
-        writer.write("        if(entity == null) throw new IllegalArgumentException(\"entity is null\");\n");
+        writer.write("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writer.write("\n");
 
         String whereArgs = createArguments();
-        writer.write("        db.delete(\"" + tableName + "\", \"" + where + "\", " + whereArgs + ");\n");
+        writer.write("        db.delete(" + mapperDescription.getVariableName() + ".getTableName(), \"" + where + "\", " + whereArgs + ");\n");
         writer.write("    }\n");
         writer.write("\n");
     }
@@ -66,5 +66,10 @@ class DeleteMethod implements StorageMethod {
         return Arrays.asList("android.database.sqlite.SQLiteDatabase",
                 "android.content.ContentValues",
                 databaseEntityTypeQualifiedName);
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }

@@ -15,6 +15,7 @@
  */
 package net.daverix.slingerorm.android.model;
 
+import net.daverix.slingerorm.android.serialization.TestSerializer;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
@@ -22,7 +23,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.UUID;
 
-@DatabaseEntity(name = "Medium")
+@DatabaseEntity(name = "Medium", serializer = TestSerializer.class)
 public class MediumEntity {
     @PrimaryKey
     private String Id;

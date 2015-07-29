@@ -7,46 +7,45 @@ import java.util.Collection;
 
 class SelectSingleMethod implements StorageMethod {
     private final String methodName;
-    private final String tableName;
     private final String returnValue;
     private final String parameters;
     private final String where;
     private final Collection<String> whereArgs;
+    private final MapperDescription mapperDescription;
 
     SelectSingleMethod(String methodName,
-                       String tableName,
                        String returnValue,
                        String parameters,
                        String where,
-                       Collection<String> whereArgs) {
+                       Collection<String> whereArgs,
+                       MapperDescription mapperDescription) {
         this.methodName = methodName;
-        this.tableName = tableName;
         this.returnValue = returnValue;
         this.parameters = parameters;
         this.where = where;
         this.whereArgs = whereArgs;
+        this.mapperDescription = mapperDescription;
     }
 
     @Override
     public void write(Writer writer) throws IOException {
-        String columns = createColumns();
         String args = createArguments();
 
         writer.write("    @Override\n");
         writer.write("    public " + returnValue + " " + methodName + "(" + parameters + ") {\n");
         writer.write("        Cursor cursor = null;\n");
         writer.write("        try {\n");
-        writer.write("            cursor = db.query(false, \"" + tableName + "\", " + columns + ", \"" + where + "\", " + args + ", null, null, null, \"1\");\n");
-        writer.write("            return null;\n");
+        writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), \"" + where + "\", " + args + ", null, null, null, \"1\");\n");
+        writer.write("            if(!cursor.moveToFirst()) return null;\n");
+        writer.write("            \n");
+        writer.write("            " + returnValue+ " item = new " + returnValue + "();\n");
+        writer.write("            " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
+        writer.write("            return item;\n");
         writer.write("        } finally {\n");
         writer.write("            if(cursor != null) cursor.close();\n");
         writer.write("        }\n");
         writer.write("    }\n");
         writer.write("\n");
-    }
-
-    private String createColumns() {
-        return "null";
     }
 
     private String createArguments() {
@@ -59,5 +58,10 @@ class SelectSingleMethod implements StorageMethod {
                 "android.database.Cursor",
                 "android.database.sqlite.SQLiteDatabase"
         );
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }

@@ -8,4 +8,6 @@ interface StorageMethod {
     void write(Writer writer) throws IOException;
 
     Collection<String> getImports();
+
+    MapperDescription getMapper();
 }

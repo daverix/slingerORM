@@ -3,7 +3,6 @@ package net.daverix.slingerorm.android.storage;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.android.model.MediumEntity;
-import net.daverix.slingerorm.android.serialization.TestSerializer;
 import net.daverix.slingerorm.annotation.CreateTable;
 import net.daverix.slingerorm.annotation.DatabaseStorage;
 import net.daverix.slingerorm.annotation.Delete;
@@ -14,7 +13,7 @@ import net.daverix.slingerorm.annotation.Update;
 
 import java.util.List;
 
-@DatabaseStorage(serializer = TestSerializer.class)
+@DatabaseStorage
 public interface MediumEntityStorage {
     @CreateTable(MediumEntity.class)
     void createTable(SQLiteDatabase db);

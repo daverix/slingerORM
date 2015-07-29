@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
-apply plugin: 'org.robolectric'
-apply plugin: 'com.neenbedankt.android-apt'
+apply plugin: 'maven'
 
 android {
     compileSdkVersion 22
@@ -9,6 +8,8 @@ android {
     defaultConfig {
         minSdkVersion 7
         targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
     }
 
     compileOptions {
@@ -18,10 +19,14 @@ android {
 }
 
 dependencies {
-    compile project(':android')
-    apt project(':compiler')
+    compile project(":core")
+}
 
-    testCompile 'org.mockito:mockito-core:1.10.19'
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.robolectric:robolectric:2.4'
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository url: 'file://' + new File(getRootDir(), 'pkg').absolutePath
+            pom.artifactId = 'slingerorm-android'
+        }
+    }
 }

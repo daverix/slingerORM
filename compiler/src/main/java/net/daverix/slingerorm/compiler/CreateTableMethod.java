@@ -2,19 +2,16 @@ package net.daverix.slingerorm.compiler;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 class CreateTableMethod implements StorageMethod {
     private final String methodName;
-    private final String createTableSql;
+    private final MapperDescription mapperDescription;
 
-    public CreateTableMethod(String methodName, String createTableSql) {
-        if(methodName == null) throw new IllegalArgumentException("methodName is null");
-        if(createTableSql == null) throw new IllegalArgumentException("createTableSql is null");
-
+    public CreateTableMethod(String methodName, MapperDescription mapperDescription) {
+        this.mapperDescription = mapperDescription;
         this.methodName = methodName;
-        this.createTableSql = createTableSql;
     }
 
     @Override
@@ -25,13 +22,18 @@ class CreateTableMethod implements StorageMethod {
         writer.write("    public void " + methodName + "(SQLiteDatabase db) {\n");
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
         writer.write("\n");
-        writer.write("        db.execSQL(\"" + createTableSql + "\");\n");
+        writer.write("        db.execSQL(" + mapperDescription.getVariableName() + ".createTable());\n");
         writer.write("    }\n");
         writer.write("\n");
     }
 
     @Override
     public Collection<String> getImports() {
-        return Arrays.asList("android.database.sqlite.SQLiteDatabase");
+        return Collections.singletonList("android.database.sqlite.SQLiteDatabase");
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }

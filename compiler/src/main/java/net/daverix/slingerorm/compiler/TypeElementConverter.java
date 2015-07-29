@@ -19,5 +19,5 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 
 interface TypeElementConverter {
-    public TypeElement asTypeElement(TypeMirror typeMirror);
+    TypeElement asTypeElement(TypeMirror typeMirror);
 }

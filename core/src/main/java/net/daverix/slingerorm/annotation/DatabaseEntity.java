@@ -15,6 +15,8 @@
  */
 package net.daverix.slingerorm.annotation;
 
+import net.daverix.slingerorm.serialization.DefaultSerializer;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -34,4 +36,10 @@ public @interface DatabaseEntity {
      * @return the primary key
      */
     String primaryKey() default "";
+
+    /**
+     * If you have other than native types, you need to set a custom serializer
+     * @return a class with methods annotated with either {@link DeserializeType} or {@link SerializeType}.
+     */
+    Class<?> serializer() default DefaultSerializer.class;
 }

@@ -4,31 +4,27 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
 
 class UpdateMethod implements StorageMethod {
-    private String methodName;
-    private String tableName;
-    private String databaseEntityTypeName;
-    private String databaseEntityTypeQualifiedName;
-    private Map<String,String> entityProperties;
-    private String where;
+    private final String methodName;
+    private final String databaseEntityTypeName;
+    private final String databaseEntityTypeQualifiedName;
+    private final String where;
     private final Collection<String> whereGetters;
+    private final MapperDescription mapperDescription;
 
     UpdateMethod(String methodName,
-                 String tableName,
                  String databaseEntityTypeName,
                  String databaseEntityTypeQualifiedName,
-                 Map<String, String> entityProperties,
                  String where,
-                 Collection<String> whereGetters) {
+                 Collection<String> whereGetters,
+                 MapperDescription mapperDescription) {
         this.methodName = methodName;
-        this.tableName = tableName;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;
-        this.entityProperties = entityProperties;
         this.where = where;
         this.whereGetters = whereGetters;
+        this.mapperDescription = mapperDescription;
     }
 
     @Override
@@ -36,18 +32,15 @@ class UpdateMethod implements StorageMethod {
         if(writer == null) throw new IllegalArgumentException("writer is null");
 
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " entity) {\n");
+        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " item) {\n");
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
-        writer.write("        if(entity == null) throw new IllegalArgumentException(\"entity is null\");\n");
+        writer.write("        if(item == null) throw new IllegalArgumentException(\"entity is null\");\n");
         writer.write("\n");
         writer.write("        ContentValues values = new ContentValues();\n");
-
-        for(String key : entityProperties.keySet()) {
-            writer.write("        values.put(\"" + key + "\", " + entityProperties.get(key) + ");\n");
-        }
+        writer.write("        " + mapperDescription.getVariableName() + ".mapValues(item, values);\n");
 
         String whereArgs = createArguments();
-        writer.write("        db.update(\"" + tableName + "\", values, \"" + where + "\", " + whereArgs + ");\n");
+        writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(), values, \"" + where + "\", " + whereArgs + ");\n");
         writer.write("    }\n");
         writer.write("\n");
     }
@@ -75,5 +68,10 @@ class UpdateMethod implements StorageMethod {
         return Arrays.asList("android.database.sqlite.SQLiteDatabase",
                 "android.content.ContentValues",
                 databaseEntityTypeQualifiedName);
+    }
+
+    @Override
+    public MapperDescription getMapper() {
+        return mapperDescription;
     }
 }
