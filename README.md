@@ -52,7 +52,7 @@ your database table and generates the code for you! The bare minimum you can ann
 
 SlingerORM will first look after getters and setters that match the fields, if it can't find any it
 will try to access the fields directly. If you have the fields private with a name that doesn't
-match the setter or getter your can annotate the methods to tell SlingerORM which fields are used.
+match the setter or getter you can annotate the methods to tell SlingerORM which fields are used.
 You can also change the name of the field in the database table by annotating the field with
 "@FieldName":
 
@@ -192,6 +192,11 @@ meantime you have to call the following code to create a local repository:
 
 You could change the build script so the build is placed in your local maven repository, right now
 it's placed in the pkg/ folder in the root of the project.
+
+You refer to it this way in gradle:
+
+    compile 'net.daverix.slingerorm:slingerorm-android:0.4'
+    provided 'net.daverix.slingerorm:compiler:0.4'
 
 License
 -------
