@@ -102,7 +102,7 @@ public class ComplexEntityStorageTest {
     @Test
     public void ShouldInsertTwoItemsAndGetThemBack() throws Exception {
         final ComplexEntity first = createEntity(42, "Adam", 2, false);
-        final ComplexEntity second = createEntity(1337, "David", 3, false);
+        final ComplexEntity second = createEntity(1337, "David", 3, true);
 
         try {
             db.beginTransaction();
@@ -113,7 +113,7 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        final List<ComplexEntity> actual = sut.getComplexEntities(db, false);
+        final List<ComplexEntity> actual = sut.getAllEntities(db);
 
         assertThat(actual).isNotNull();
         assertThat(actual).isNotEmpty();

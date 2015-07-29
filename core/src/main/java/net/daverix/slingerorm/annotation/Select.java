@@ -24,8 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface Select {
-    String where();
+    String where() default "";
     String orderBy() default "";
-    boolean descending() default false;
-    int limit() default Integer.MAX_VALUE;
+    int limit() default -1;
 }

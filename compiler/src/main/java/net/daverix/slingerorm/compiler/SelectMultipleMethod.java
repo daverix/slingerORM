@@ -51,6 +51,7 @@ public class SelectMultipleMethod implements StorageMethod {
 
     @Override
     public void write(Writer writer) throws IOException {
+        String where = getWhere();
         String args = createArguments();
         String orderByText = createOrderBy();
 
@@ -58,7 +59,7 @@ public class SelectMultipleMethod implements StorageMethod {
         writer.write("    public " + returnTypeName + " " + methodName + "(" + parameterText + ") {\n");
         writer.write("        Cursor cursor = null;\n");
         writer.write("        try {\n");
-        writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), \"" + where + "\", " + args + ", null, null, " + orderByText + ", null);\n");
+        writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), " + where + ", " + args + ", null, null, " + orderByText + ", null);\n");
         writer.write("            " + returnTypeName + " items = new ArrayList<" + entityName + ">();\n");
         writer.write("            if(!cursor.moveToFirst()) return items;\n");
         writer.write("            \n");
@@ -75,6 +76,12 @@ public class SelectMultipleMethod implements StorageMethod {
         writer.write("\n");
     }
 
+    private String getWhere() {
+        if(where == null) return "null";
+
+        return "\"" + where + "\"";
+    }
+
     private String createOrderBy() {
         if(orderBy == null) return "null";
 
@@ -82,6 +89,8 @@ public class SelectMultipleMethod implements StorageMethod {
     }
 
     private String createArguments() {
+        if(whereArgs == null || whereArgs.isEmpty()) return "null";
+
         return "new String[]{" + String.join(", ", whereArgs) +  "}";
     }
 

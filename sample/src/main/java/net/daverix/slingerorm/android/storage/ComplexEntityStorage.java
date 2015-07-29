@@ -49,6 +49,9 @@ public interface ComplexEntityStorage {
     @Select(where = "_id = ?")
     ComplexEntity getEntity(SQLiteDatabase db, long id);
 
+    @Select
+    List<ComplexEntity> getAllEntities(SQLiteDatabase db);
+
     @Select(where = "isComplex = ?")
     List<ComplexEntity> getComplexEntities(SQLiteDatabase db, boolean complex);
 }
