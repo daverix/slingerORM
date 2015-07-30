@@ -52,11 +52,8 @@ class UpdateMethod implements StorageMethod {
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
         writer.write("        if(item == null) throw new IllegalArgumentException(\"entity is null\");\n");
         writer.write("\n");
-        writer.write("        ContentValues values = new ContentValues();\n");
-        writer.write("        " + mapperDescription.getVariableName() + ".mapValues(item, values);\n");
-
         String whereArgs = createArguments();
-        writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(), values, \"" + where + "\", " + whereArgs + ");\n");
+        writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".mapValues(item), \"" + where + "\", " + whereArgs + ");\n");
         writer.write("    }\n");
         writer.write("\n");
     }

@@ -60,15 +60,8 @@ public class SelectMultipleMethod implements StorageMethod {
         writer.write("        Cursor cursor = null;\n");
         writer.write("        try {\n");
         writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), " + where + ", " + args + ", null, null, " + orderByText + ", null);\n");
-        writer.write("            " + returnTypeName + " items = new ArrayList<" + entityName + ">();\n");
-        writer.write("            if(!cursor.moveToFirst()) return items;\n");
         writer.write("            \n");
-        writer.write("            do {\n");
-        writer.write("                " + entityName + " item = new " + entityName + "();\n");
-        writer.write("                " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
-        writer.write("                items.add(item);\n");
-        writer.write("            } while(cursor.moveToNext());\n");
-        writer.write("            return items;\n");
+        writer.write("            return " + mapperDescription.getVariableName() + ".mapList(cursor);\n");
         writer.write("        } finally {\n");
         writer.write("            if(cursor != null) cursor.close();\n");
         writer.write("        }\n");
@@ -99,8 +92,7 @@ public class SelectMultipleMethod implements StorageMethod {
         return Arrays.asList(
                 "android.database.Cursor",
                 "android.database.sqlite.SQLiteDatabase",
-                "java.util.List",
-                "java.util.ArrayList"
+                "java.util.List"
         );
     }
 

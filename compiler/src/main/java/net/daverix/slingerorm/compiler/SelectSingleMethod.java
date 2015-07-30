@@ -54,9 +54,7 @@ class SelectSingleMethod implements StorageMethod {
         writer.write("            cursor = db.query(false, " + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".getFieldNames(), \"" + where + "\", " + args + ", null, null, null, \"1\");\n");
         writer.write("            if(!cursor.moveToFirst()) return null;\n");
         writer.write("            \n");
-        writer.write("            " + returnValue+ " item = new " + returnValue + "();\n");
-        writer.write("            " + mapperDescription.getVariableName() + ".mapItem(cursor, item);\n");
-        writer.write("            return item;\n");
+        writer.write("            return " + mapperDescription.getVariableName() + ".mapItem(cursor);\n");
         writer.write("        } finally {\n");
         writer.write("            if(cursor != null) cursor.close();\n");
         writer.write("        }\n");

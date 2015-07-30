@@ -107,6 +107,7 @@ public class DatabaseEntityMapperBuilder {
         }
         else {
             writer.write("    public " + databaseEntityClassName + "Mapper(" + serializerClassName + " serializer) {\n");
+            writer.write("        if(serializer == null) throw new IllegalArgumentException(\"serializer is null\");\n");
             writer.write("        this.serializer = serializer;\n");
         }
         writer.write("    }\n");
@@ -137,18 +138,39 @@ public class DatabaseEntityMapperBuilder {
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public void mapValues(" + databaseEntityClassName + " item, ContentValues values) {\n");
+        writer.write("    public ContentValues mapValues(" + databaseEntityClassName + " item) {\n");
+        writer.write("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n");
+        writeln();
+        writer.write("        ContentValues values = new ContentValues();\n");
         for(FieldMethod getter : getters) {
             writer.write("        values.put(" + getter.getMethod() + ");\n");
         }
+        writer.write("        return values;\n");
         writer.write("    }\n");
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public void mapItem(Cursor cursor, " + databaseEntityClassName + " item) {\n");
+        writer.write("    public " + databaseEntityClassName + " mapItem(Cursor cursor) {\n");
+        writer.write("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");\n");
+        writeln();
+        writer.write("        " + databaseEntityClassName + " item = new " + databaseEntityClassName + "();\n");
         for(FieldMethod setter : setters) {
-            writer.write("       item." + setter.getMethod() + ";\n");
+            writer.write("        item." + setter.getMethod() + ";\n");
         }
+        writer.write("        return item;\n");
+        writer.write("    }\n");
+        writeln();
+
+        writer.write("    @Override\n");
+        writer.write("    public List<" + databaseEntityClassName + "> mapList(Cursor cursor) {\n");
+        writer.write("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");\n");
+        writer.write("        if(!cursor.moveToFirst()) return new ArrayList<" + databaseEntityClassName + ">();\n");
+        writeln();
+        writer.write("        List<" + databaseEntityClassName + "> items = new ArrayList<" + databaseEntityClassName + ">();\n");
+        writer.write("        do {;\n");
+        writer.write("            items.add(mapItem(cursor));\n");
+        writer.write("        } while(cursor.moveToNext());\n");
+        writer.write("        return items;\n");
         writer.write("    }\n");
         writeln();
     }
@@ -172,6 +194,8 @@ public class DatabaseEntityMapperBuilder {
         qualifiedNames.add(serializerQualifiedName);
         qualifiedNames.add("android.content.ContentValues");
         qualifiedNames.add("android.database.Cursor");
+        qualifiedNames.add("java.util.List");
+        qualifiedNames.add("java.util.ArrayList");
 
         List<String> sortedNames = new ArrayList<String>(qualifiedNames);
         Collections.sort(sortedNames);

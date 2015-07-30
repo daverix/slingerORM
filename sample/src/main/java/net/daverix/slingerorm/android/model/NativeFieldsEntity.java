@@ -85,4 +85,49 @@ public class NativeFieldsEntity {
     public void setTypeDouble(double typeDouble) {
         this.typeDouble = typeDouble;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NativeFieldsEntity)) return false;
+
+        NativeFieldsEntity that = (NativeFieldsEntity) o;
+
+        if (getTypeLong() != that.getTypeLong()) return false;
+        if (getTypeInt() != that.getTypeInt()) return false;
+        if (getTypeShort() != that.getTypeShort()) return false;
+        if (isTypeBoolean() != that.isTypeBoolean()) return false;
+        if (Float.compare(that.getTypeFloat(), getTypeFloat()) != 0) return false;
+        if (Double.compare(that.getTypeDouble(), getTypeDouble()) != 0) return false;
+        return !(getTypeString() != null ? !getTypeString().equals(that.getTypeString()) : that.getTypeString() != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        result = (int) (getTypeLong() ^ (getTypeLong() >>> 32));
+        result = 31 * result + getTypeInt();
+        result = 31 * result + (int) getTypeShort();
+        result = 31 * result + (getTypeString() != null ? getTypeString().hashCode() : 0);
+        result = 31 * result + (isTypeBoolean() ? 1 : 0);
+        result = 31 * result + (getTypeFloat() != +0.0f ? Float.floatToIntBits(getTypeFloat()) : 0);
+        temp = Double.doubleToLongBits(getTypeDouble());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "NativeFieldsEntity{" +
+                "typeLong=" + typeLong +
+                ", typeInt=" + typeInt +
+                ", typeShort=" + typeShort +
+                ", typeString='" + typeString + '\'' +
+                ", typeBoolean=" + typeBoolean +
+                ", typeFloat=" + typeFloat +
+                ", typeDouble=" + typeDouble +
+                '}';
+    }
 }

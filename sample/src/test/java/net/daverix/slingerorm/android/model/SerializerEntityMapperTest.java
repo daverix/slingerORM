@@ -1,21 +1,24 @@
 package net.daverix.slingerorm.android.model;
 
 import android.content.ContentValues;
-import android.database.Cursor;
+import android.database.MatrixCursor;
 
 import net.daverix.slingerorm.android.Mapper;
 import net.daverix.slingerorm.android.serialization.TestSerializer;
+import net.daverix.slingerorm.core.android.BuildConfig;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Date;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class)
 public class SerializerEntityMapperTest {
     private Mapper<SerializerEntity> sut;
 
@@ -32,11 +35,9 @@ public class SerializerEntityMapperTest {
         entity.setId(id);
         entity.setCreated(created);
 
-        ContentValues values = mock(ContentValues.class);
-        sut.mapValues(entity, values);
-
-        verify(values).put("id", id);
-        verify(values).put("created", created.getTime());
+        ContentValues actual = sut.mapValues(entity);
+        assertThat(actual.getAsLong("id")).isEqualTo(id);
+        assertThat(actual.getAsLong("created")).isEqualTo(created.getTime());
     }
 
     @Test
@@ -45,15 +46,11 @@ public class SerializerEntityMapperTest {
         Date created = new Date();
         String[] fieldNames = new String[] {"id", "created"};
 
-        Cursor cursor = mock(Cursor.class);
-        for (int i = 0; i < fieldNames.length; i++) {
-            when(cursor.getColumnIndex(fieldNames[i])).thenReturn(i);
-        }
-        when(cursor.getLong(0)).thenReturn(id);
-        when(cursor.getLong(1)).thenReturn(created.getTime());
+        MatrixCursor cursor = new MatrixCursor(fieldNames);
+        cursor.addRow(new Object[]{id, created.getTime()});
 
-        SerializerEntity item = new SerializerEntity();
-        sut.mapItem(cursor, item);
+        cursor.moveToFirst();
+        SerializerEntity item = sut.mapItem(cursor);
 
         assertThat(item.getId()).isEqualTo(id);
         assertThat(item.getCreated()).isEqualTo(created);

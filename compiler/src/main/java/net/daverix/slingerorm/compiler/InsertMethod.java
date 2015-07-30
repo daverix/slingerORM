@@ -44,9 +44,7 @@ class InsertMethod implements StorageMethod {
         writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
         writer.write("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writer.write("\n");
-        writer.write("        ContentValues values = new ContentValues();\n");
-        writer.write("        " + mapperDescription.getVariableName() + ".mapValues(item, values);\n");
-        writer.write("        db.insertOrThrow(" + mapperDescription.getVariableName() + ".getTableName(), null, values);\n");
+        writer.write("        db.insertOrThrow(" + mapperDescription.getVariableName() + ".getTableName(), null, " + mapperDescription.getVariableName() + ".mapValues(item));\n");
         writer.write("    }\n");
         writer.write("\n");
     }

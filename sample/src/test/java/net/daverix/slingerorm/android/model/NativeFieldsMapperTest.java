@@ -1,21 +1,24 @@
 package net.daverix.slingerorm.android.model;
 
 import android.content.ContentValues;
-import android.database.Cursor;
+import android.database.MatrixCursor;
 
 import net.daverix.slingerorm.android.Mapper;
+import net.daverix.slingerorm.core.android.BuildConfig;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class)
 public class NativeFieldsMapperTest {
     private Mapper<NativeFieldsEntity> sut;
 
@@ -40,17 +43,15 @@ public class NativeFieldsMapperTest {
         entity.setTypeInt(1337);
         entity.setTypeShort((short) 42);
 
-        ContentValues values = mock(ContentValues.class);
+        ContentValues values = sut.mapValues(entity);
 
-        sut.mapValues(entity, values);
-
-        verify(values).put("typeBoolean", true);
-        verify(values).put("typeString", "hello");
-        verify(values).put("typeDouble", 1.23456789010111213d);
-        verify(values).put("typeFloat", 1.234567f);
-        verify(values).put("typeLong", 1234567891011121314L);
-        verify(values).put("typeInt", 1337);
-        verify(values).put("typeShort", (short) 42);
+        assertThat(values.getAsBoolean("typeBoolean")).isTrue();
+        assertThat(values.getAsString("typeString")).isEqualTo("hello");
+        assertThat(values.getAsDouble("typeDouble")).isWithin(0.000000000000000001).of(1.23456789010111213d);
+        assertThat(values.getAsFloat("typeFloat")).isEqualTo(1.234567f);
+        assertThat(values.getAsLong("typeLong")).isEqualTo(1234567891011121314L);
+        assertThat(values.getAsInteger("typeInt")).isEqualTo(1337);
+        assertThat(values.getAsShort("typeShort")).isEqualTo((short) 42);
     }
 
     @Test
@@ -63,31 +64,66 @@ public class NativeFieldsMapperTest {
 
     @Test
     public void shouldGetDataFromCursor() {
-        Cursor cursor = mock(Cursor.class);
         String[] fieldNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
                 "typeLong", "typeInt", "typeShort"};
 
-        for(int i=0;i<fieldNames.length;i++) {
-            when(cursor.getColumnIndex(fieldNames[i])).thenReturn(i);
-        }
-        when(cursor.getShort(0)).thenReturn((short) 1);
-        when(cursor.getString(1)).thenReturn("Hello");
-        when(cursor.getDouble(2)).thenReturn(1.23456789010111213d);
-        when(cursor.getFloat(3)).thenReturn(1.234567f);
-        when(cursor.getLong(4)).thenReturn(1234567891011121314L);
-        when(cursor.getInt(5)).thenReturn(1337);
-        when(cursor.getShort(6)).thenReturn((short) 42);
+        final NativeFieldsEntity expected = new NativeFieldsEntity();
+        expected.setTypeBoolean(true);
+        expected.setTypeString("hello");
+        expected.setTypeDouble(1.23456789010111213d);
+        expected.setTypeFloat(1.234567f);
+        expected.setTypeLong(1234567891011121314L);
+        expected.setTypeInt(1337);
+        expected.setTypeShort((short) 42);
 
-        NativeFieldsEntity item = new NativeFieldsEntity();
-        sut.mapItem(cursor, item);
+        MatrixCursor cursor = new MatrixCursor(fieldNames, 1);
+        cursor.addRow(createCursorRow(expected));
 
+        cursor.moveToFirst();
+        NativeFieldsEntity actual = sut.mapItem(cursor);
+        assertThat(actual).isEqualTo(expected);
+    }
 
-        assertThat(item.isTypeBoolean()).isTrue();
-        assertThat(item.getTypeString()).isEqualTo("Hello");
-        assertThat(item.getTypeDouble()).isWithin(0.000000000000000001).of(1.23456789010111213d);
-        assertThat(item.getTypeFloat()).isEqualTo(1.234567f);
-        assertThat(item.getTypeLong()).isEqualTo(1234567891011121314L);
-        assertThat(item.getTypeInt()).isEqualTo(1337);
-        assertThat(item.getTypeShort()).isEqualTo((short) 42);
+    @Test
+    public void shouldGetListDataFromCursor() {
+        String[] fieldNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
+                "typeLong", "typeInt", "typeShort"};
+
+        final NativeFieldsEntity first = new NativeFieldsEntity();
+        first.setTypeBoolean(true);
+        first.setTypeString("hello");
+        first.setTypeDouble(1.23456789010111213d);
+        first.setTypeFloat(1.234567f);
+        first.setTypeLong(1234567891011121314L);
+        first.setTypeInt(1337);
+        first.setTypeShort((short) 42);
+
+        final NativeFieldsEntity second = new NativeFieldsEntity();
+        second.setTypeBoolean(false);
+        second.setTypeString("hello2");
+        second.setTypeDouble(2.23456789010111213d);
+        second.setTypeFloat(2.234567f);
+        second.setTypeLong(2234567891011121314L);
+        second.setTypeInt(2337);
+        second.setTypeShort((short) 242);
+
+        MatrixCursor cursor = new MatrixCursor(fieldNames, 2);
+        cursor.addRow(createCursorRow(first));
+        cursor.addRow(createCursorRow(second));
+
+        List<NativeFieldsEntity> actual = sut.mapList(cursor);
+        assertThat(actual).containsExactlyElementsIn(Arrays.asList(first, second));
+    }
+
+    private Object[] createCursorRow(NativeFieldsEntity entity) {
+        return new Object[] {
+                (short) (entity.isTypeBoolean() ? 1 : 0),
+                entity.getTypeString(),
+                entity.getTypeDouble(),
+                entity.getTypeFloat(),
+                entity.getTypeLong(),
+                entity.getTypeInt(),
+                entity.getTypeShort()
+        };
     }
 }

@@ -112,9 +112,7 @@ that you can use to map the tedious part in the example above:
 Insert:
 
     Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
-    ContentValues values = new ContentValues();
-    mapper.mapValues(item, values);
-    db.insertOrThrow(mapper.getTableName(), null, values);
+    db.insertOrThrow(mapper.getTableName(), null, mapper.mapValues(item));
 
 Query:
 
@@ -126,11 +124,7 @@ Query:
             String.valueOf(id)
         }, null, null, null, "1");
 
-        if(!cursor.moveToFirst()) return null;
-
-        ExampleEntity readItem = new ExampleEntity();
-        mapper.mapItem(cursor, readItem);
-        return readItem;
+        return mapper.mapList(cursor);
     } finally {
         if(cursor != null) cursor.close();
     }

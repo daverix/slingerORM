@@ -1,21 +1,24 @@
 package net.daverix.slingerorm.android.model;
 
 import android.content.ContentValues;
-import android.database.Cursor;
+import android.database.MatrixCursor;
 
 import net.daverix.slingerorm.android.Mapper;
+import net.daverix.slingerorm.core.android.BuildConfig;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.util.Arrays;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class)
 public class CustomFieldEntityMapperTest {
     private Mapper<CustomFieldEntity> sut;
 
@@ -32,11 +35,10 @@ public class CustomFieldEntityMapperTest {
         entity.setId(id);
         entity.setName(name);
 
-        ContentValues values = mock(ContentValues.class);
-        sut.mapValues(entity, values);
+        ContentValues values = sut.mapValues(entity);
 
-        verify(values).put("Id", id);
-        verify(values).put("Name", name);
+        assertThat(values.getAsString("Id")).isEqualTo(id);
+        assertThat(values.getAsString("Name")).isEqualTo(name);
     }
 
     @Test
@@ -50,16 +52,11 @@ public class CustomFieldEntityMapperTest {
         String id = "banana";
         String name = "Code Monkey";
         String[] fieldNames = new String[] {"Id", "Name"};
+        MatrixCursor cursor = new MatrixCursor(fieldNames);
+        cursor.addRow(new String[]{id, name});
 
-        Cursor cursor = mock(Cursor.class);
-        for (int i = 0; i < fieldNames.length; i++) {
-            when(cursor.getColumnIndex(fieldNames[i])).thenReturn(i);
-        }
-        when(cursor.getString(0)).thenReturn(id);
-        when(cursor.getString(1)).thenReturn(name);
-
-        CustomFieldEntity item = new CustomFieldEntity();
-        sut.mapItem(cursor, item);
+        cursor.moveToFirst();
+        CustomFieldEntity item = sut.mapItem(cursor);
 
         assertThat(item.getId()).isEqualTo(id);
         assertThat(item.getName()).isEqualTo(name);

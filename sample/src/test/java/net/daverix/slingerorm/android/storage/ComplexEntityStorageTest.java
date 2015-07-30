@@ -18,6 +18,7 @@ package net.daverix.slingerorm.android.storage;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.android.model.ComplexEntity;
+import net.daverix.slingerorm.core.android.BuildConfig;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static net.daverix.slingerorm.android.SqliteDatabaseSubject.database;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@Config(constants = BuildConfig.class)
 public class ComplexEntityStorageTest {
     private SQLiteDatabase db;
     private ComplexEntityStorage sut;

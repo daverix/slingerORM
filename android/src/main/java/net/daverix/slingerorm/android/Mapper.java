@@ -19,6 +19,8 @@ package net.daverix.slingerorm.android;
 import android.content.ContentValues;
 import android.database.Cursor;
 
+import java.util.List;
+
 public interface Mapper<T> {
     /**
      * Generates SQL for creating a table for the mapper type
@@ -41,14 +43,23 @@ public interface Mapper<T> {
     /**
      * Pulls data from item and puts it into values
      * @param item an item with getters for getting data
-     * @param values a standard {@link ContentValues} object to fill with data
+     * @return a standard {@link ContentValues} object with mapped data
      */
-    void mapValues(T item, ContentValues values);
+    ContentValues mapValues(T item);
 
     /**
-     * Pulls data from cursor and calls setters on item to fill with data
+     * Pulls data from cursor and calls setters on item to fill with data. Cursor must be moved to
+     * a valid position before calling this method.
      * @param cursor a standard {@link Cursor} that must have it's pointer set to an element
-     * @param item an item with setters for setting data from cursor
+     * @return an instance of {@link T} with mapped data from the cursor
      */
-    void mapItem(Cursor cursor, T item);
+    T mapItem(Cursor cursor);
+
+    /**
+     * Pulls data from cursor and creates instances for each position iterating through the cursor
+     * until it's on the last position. Cursor will be moved to the first position automatically.
+     * @param cursor a standard {@link Cursor}
+     * @return an instance of {@link List<T>} with mapped data from the cursor
+     */
+    List<T> mapList(Cursor cursor);
 }
