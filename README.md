@@ -3,8 +3,8 @@ SlingerORM
 
 SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simplicity.
 
-Usage
------
+Introduction
+------------
 
 When writing your code for your database layer in Android you will have a lot of code like this:
 
@@ -41,51 +41,9 @@ When writing your code for your database layer in Android you will have a lot of
 
 Writing that becomes tedious when having over hundred fields in your database table that you want to
 have mapped. SlingerORM solves this problem by looking at annotations for your class that represents
-your database table and generates the code for you! The bare minimum you can annotate is this:
+your database table and generates the code for you!
 
-    @DatabaseEntity
-    public class ExampleEntity {
-      @PrimaryKey
-      public String Id;
-      public String Name;
-    }
-
-SlingerORM will first look after getters and setters that match the fields, if it can't find any it
-will try to access the fields directly. If you have the fields private with a name that doesn't
-match the setter or getter you can annotate the methods to tell SlingerORM which fields are used.
-You can also change the name of the field in the database table by annotating the field with
-"@FieldName":
-
-    @DatabaseEntity
-    public class ExampleEntity {
-      @PrimaryKey @FieldName("_id")
-      private String mId;
-      
-      @FieldName("name")
-      private String mName;
-      
-      @SetField("mId")
-      public void setId(String id) {
-        mId = id;
-      }
-      
-      @GetField("mId")
-      public String getId() {
-        return mId;
-      }
-      
-      @SetField("mName")
-      public void setName(String name) {
-        mName = name;
-      }
-      
-      @GetField("mName")
-      public void getName() {
-        return mName;
-      }
-    }
-
-SlingerORM generates the code using two annotation processors. The first generates a mapper class
+SlingerORM generates code using two annotation processors. The first generates a mapper class
 that you can use to map the tedious part in the example above:
 
     private Mapper<ExampleEntity> mapper;
@@ -135,20 +93,120 @@ above but with an interface instead:
         ExampleEntity getEntity(SQLiteDatabase db, long id);
     }
 
-To get the implementation simply add "Slinger" before the name of the interface:
+The implementation of this interface also creates a builder for setting up the implementation of the
+storage class. More about this in the usage section below.
+
+Usage
+-----
+The bare minimum you need to annotate for a normal class is this:
+
+    @DatabaseEntity
+    public class ExampleEntity {
+        @PrimaryKey
+        private String id;
+        private String name;
+
+        public void setId(String id) {
+          this.id = id;
+        }
+
+        public String getId() {
+          return id;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+    }
+
+SlingerORM will first look after getters and setters that match the fields (i.e setId,getId etc).
+If it can't find any it getters or setters, it will try to access the fields directly. If that's not
+possible the compiler will show an error that explains this.
+
+If you have fields that doesn't match your corresponding set and get methods. You can annotate your
+set and get methods with an annotation telling SlingerORM which field the method will set or get:
+
+    @DatabaseEntity
+    public class ExampleEntity {
+      @PrimaryKey
+      private String mId;
+      private String mName;
+      
+      @SetField("mId")
+      public void setId(String id) {
+        mId = id;
+      }
+      
+      @GetField("mId")
+      public String getId() {
+        return mId;
+      }
+      
+      @SetField("mName")
+      public void setName(String name) {
+        mName = name;
+      }
+      
+      @GetField("mName")
+      public void getName() {
+        return mName;
+      }
+    }
+
+If you don't want to have the names of the field in your class as the columns in your table, you
+can annotate these fields with @FieldName:
+
+    @DatabaseEntity
+    public class ExampleEntity {
+      @FieldName("Id") @PrimaryKey
+      private String id;
+      @FieldName("Name")
+      private String name;
+
+      ...
+    }
+
+
+Then if you want a mapper for this entity you only have to instantiate one by suffixing Mapper to
+the entity name:
+
+    Mapper<ExampleEntity> exampleEntityMapper = new ExampleEntityMapper();
+    ...
+
+You can also generate a storage class that will use one or more mappers by creating an interface and
+annotating it with "@DatabaseStorage":
+
+    @DatabaseStorage
+    public interface ExampleEntityStorage {
+        @Insert
+        void insert(SQLiteDatabase db, ExampleEntity complexEntity);
+
+        @Select(where = "_id = ?")
+        ExampleEntity getEntity(SQLiteDatabase db, long id);
+    }
+
+To get the implementation of the interface simply add "Slinger" before the name of the interface and
+use the builder:
 
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder().build();
+    ...
 
-You might wonder where the mapper went? It is used inside the storage implementation and can be set
-in the builder if you either want to make your own mapper (a rare case) or you want to provide
-a serializer for the mapper (for fields that otherwise can't be mapped):
+If you are using the mapper outside the storage you might not want multiple instances. You can pass
+an instance of a mapper in the builder like this:
 
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
         .exampleEntityMapper(new ExampleEntityMapper())
         .build();
+    ...
 
-To use a custom serializer, you will have to create a new class and add "@SerializeType" and
-"@DeserializeType" annotations:
+Sometimes some type of fields in the database entity will not be a native data type that SlingerORM
+supports. You will then need to implement your custom serializer. Create a class and add
+"@SerializeType" and "@DeserializeType" annotations to the methods. Deserialize methods will be
+called when getting data from the database and serialize methods will be called when inserting data:
 
     public class MyCustomSerializer {
         @DeserializeType
@@ -162,7 +220,8 @@ To use a custom serializer, you will have to create a new class and add "@Serial
         }
     }
 
-Then in your database entity, you will have to set the serializer in the annotation:
+To tell SlingerORM which serializer to use for which entity, set the "serializer" field in
+DatabaseEntity annotation:
 
     @DatabaseEntity(serializer = MyCustomSerializer.class)
     public class ExampleEntity {
@@ -171,7 +230,8 @@ Then in your database entity, you will have to set the serializer in the annotat
       public Date Created;
     }
 
-The mapper will then require you to pass an instance of this class in the constructor:
+The storage class will then require you to pass in the mapper because it doesn't have an empty
+constructor anymore:
 
     Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
 
