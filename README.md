@@ -194,6 +194,14 @@ annotating it with "@DatabaseStorage":
         @Update
         void update(SQLiteDatabase db, ExampleEntity exampleEntity);
 
+        //using an empty delete together with an "@DatabaseEntity" annotated class as parameter deletes the entity.
+        @Delete
+        void delete(SQLiteDatabase db, ExampleEntity exampleEntity);
+
+        //you can also specify "where" to delete everything that matches the given query
+        @Delete(where = "someVar = ?")
+        void deleteItemsWithSomeVar(SQLiteDatabase db, String someVar);
+
         // slingerorm will match the "?" with your parameters, starting with the second from the left
         @Select(where = "_id = ?")
         ExampleEntity getEntity(SQLiteDatabase db, long id);
