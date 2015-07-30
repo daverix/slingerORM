@@ -1,104 +1,13 @@
 SlingerORM
 ==========
 
-SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simplicity.
+SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simplicity. It uses code
+generation to generate code against the database that you don't want to write over and over again.
 
-Introduction
-------------
+Basic usage
+----------
 
-When writing your code for your database layer in Android you will have a lot of code like this:
-
-    public void insert(SQLiteDatabase db, ExampleEntity item) {
-        if(db == null) throw new IllegalArgumentException("db is null");
-        if(item == null) throw new IllegalArgumentException("item is null");
-
-        ContentValues values = new ContentValues();
-        values.put("id", item.getId());
-        values.put("name", item.getName());
-        db.insertOrThrow("ExampleEntity", null, values);
-    }
-
-    public ExampleEntity getEntity(SQLiteDatabase db, long id) {
-        Cursor cursor = null;
-        try {
-            cursor = db.query(false, "ExampleEntity", new String[] {
-                "id",
-                "name"
-            }, "_id = ?", new String[] {
-                String.valueOf(id)
-            }, null, null, null, "1");
-
-            if(!cursor.moveToFirst()) return null;
-
-            ExampleEntity item = new ExampleEntity();
-            item.setId(cursor.getLong(0));
-            item.setName(cursor.getString(1));
-            return item;
-        } finally {
-            if(cursor != null) cursor.close();
-        }
-    }
-
-Writing that becomes tedious when having over hundred fields in your database table that you want to
-have mapped. SlingerORM solves this problem by looking at annotations for your class that represents
-your database table and generates the code for you!
-
-SlingerORM generates code using two annotation processors. The first generates a mapper class
-that you can use to map the tedious part in the example above:
-
-    private Mapper<ExampleEntity> mapper;
-
-    public Storage() {
-        this.mapper = new ExampleEntityMapper();
-    }
-
-    public void insert(SQLiteDatabase db, ExampleEntity item) {
-        if(db == null) throw new IllegalArgumentException("db is null");
-        if(item == null) throw new IllegalArgumentException("item is null");
-
-        ContentValues values = new ContentValues();
-        mapper.mapValues(item, values);
-        db.insertOrThrow(mapper.getTableName(), null, values);
-    }
-
-    public ExampleEntity getEntity(SQLiteDatabase db, long id) {
-        Cursor cursor = null;
-        try {
-            cursor = db.query(false, mapper.getTableName(), mapper.getFieldNames(), "_id = ?",
-                    new String[] {
-                String.valueOf(id)
-            }, null, null, null, "1");
-
-            if(!cursor.moveToFirst()) return null;
-
-            ExampleEntity item = new ExampleEntity();
-            mapper.mapItem(cursor, item);
-            return item;
-        } finally {
-            if(cursor != null) cursor.close();
-        }
-    }
-
-It doesn't matter if it was 2 or hundred fields, this takes care of all the mapping for us! But
-there are still some tedious code to write! The second annotation processor generates the whole
-storage class by implementing your own interface with annotated methods. Here is our storage like
-above but with an interface instead:
-
-    @DatabaseStorage
-    public interface ExampleEntityStorage {
-        @Insert
-        void insert(SQLiteDatabase db, ExampleEntity complexEntity);
-
-        @Select(where = "_id = ?")
-        ExampleEntity getEntity(SQLiteDatabase db, long id);
-    }
-
-The implementation of this interface also creates a builder for setting up the implementation of the
-storage class. More about this in the usage section below.
-
-Usage
------
-The bare minimum you need to annotate for a normal class is this:
+The bare minimum that is needed for SlingerORM to work is an entity and an interface written by you:
 
     @DatabaseEntity
     public class ExampleEntity {
@@ -122,6 +31,116 @@ The bare minimum you need to annotate for a normal class is this:
             return name;
         }
     }
+
+    @DatabaseStorage
+    public interface ExampleStorage {
+        @CreateTable(ExampleEntity.class)
+        void createTable(SQLiteDatabase db);
+
+        @Insert
+        void insert(SQLiteDatabase db, ExampleEntity entity);
+
+        @Delete
+        void delete(SQLiteDatabase db, ExampleEntity entity);
+
+        @Select
+        List<ExampleEntity> getAllExamples();
+    }
+
+Get an instance of your interface by accessing the generated builder by prefixing your interface
+name with "Slinger":
+
+    SQLiteDatabase db = ...
+    ExampleStorage storage = SlingerExampleStorage.builder().build();
+
+    storage.createTable(db);
+
+    ExampleEntity entity = new ExampleEntity()
+    entity.setId(42);
+    entity.setName("David");
+    storage.insert(db, entity);
+
+    List<ExampleEntity> examples = storage.getAllExamples();
+    ...
+
+
+What does it really solve?
+--------------------------
+
+When writing your code for your database layer in Android you will have a lot of code like this:
+
+Insert:
+
+    SQLiteDatabase db = ...
+
+    ExampleEntity item = ...
+    ContentValues values = new ContentValues();
+    values.put("id", item.getId());
+    values.put("name", item.getName());
+    db.insertOrThrow("ExampleEntity", null, values);
+
+Query:
+
+    Cursor cursor = null;
+    try {
+        cursor = db.query(false, "ExampleEntity", new String[] {
+            "id",
+            "name"
+        }, "_id = ?", new String[] {
+            String.valueOf(id)
+        }, null, null, null, "1");
+
+        if(!cursor.moveToFirst()) return null;
+
+        ExampleEntity readItem = new ExampleEntity();
+        readItem.setId(cursor.getLong(0));
+        readItem.setName(cursor.getString(1));
+
+        ... //Do something with readItem
+    } finally {
+        if(cursor != null) cursor.close();
+    }
+
+Writing that becomes tedious when having over hundred fields in your database table that you want to
+have mapped. You will write the wrong field name or having to add even more code to put those into
+constants to be sure every field is mapped right. SlingerORM solves this problem by looking at
+annotations for your class that represents your database table and generate the code above for you!
+
+SlingerORM generates code using two annotation processors. The first generates a mapper class
+that you can use to map the tedious part in the example above:
+
+Insert:
+
+    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
+    ContentValues values = new ContentValues();
+    mapper.mapValues(item, values);
+    db.insertOrThrow(mapper.getTableName(), null, values);
+
+Query:
+
+    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
+    Cursor cursor = null;
+    try {
+        cursor = db.query(false, mapper.getTableName(), mapper.getFieldNames(), "_id = ?",
+                new String[] {
+            String.valueOf(id)
+        }, null, null, null, "1");
+
+        if(!cursor.moveToFirst()) return null;
+
+        ExampleEntity readItem = new ExampleEntity();
+        mapper.mapItem(cursor, readItem);
+        return readItem;
+    } finally {
+        if(cursor != null) cursor.close();
+    }
+
+The second annotation processor generates code for inserting, updating, deleting, querying etc
+depending on what methods you provide in your custom storage interface (as seen in the basic usage
+above)
+
+Configuring the DatabaseEntity
+------------------------------
 
 SlingerORM will first look after getters and setters that match the fields (i.e setId,getId etc).
 If it can't find any it getters or setters, it will try to access the fields directly. If that's not
@@ -170,15 +189,29 @@ can annotate these fields with @FieldName:
       ...
     }
 
+Using the mapper standalone
+---------------------------
 
-Then if you want a mapper for this entity you only have to instantiate one by suffixing Mapper to
-the entity name:
+It's possible to use the database entity mapper and then do the quering etc yourself. You get an
+implementation of the Mapper interface by suffixing the database entity name with "Mapper":
 
     Mapper<ExampleEntity> exampleEntityMapper = new ExampleEntityMapper();
     ...
 
-You can also generate a storage class that will use one or more mappers by creating an interface and
-annotating it with "@DatabaseStorage":
+Configuring the storage class
+-----------------------------
+
+The storage class uses one or more mappers that can be configured by calling methods in the builder.
+The number of mappers used for a storage depends on how many different database entities are used
+in the storage class:
+
+    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
+        .exampleEntityMapper(new ExampleEntityMapper())
+        .otherExampleMapper(new OtherExampleMapper())
+        .build();
+    ...
+
+Here is some of the annotations that can be used on the methods in your storage interface:
 
     @DatabaseStorage
     public interface ExampleEntityStorage {
@@ -215,19 +248,8 @@ annotating it with "@DatabaseStorage":
         List<ExampleEntity> getLatest(SQLiteDatabase db);
     }
 
-To get the implementation of the interface simply add "Slinger" before the name of the interface and
-use the builder:
-
-    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder().build();
-    ...
-
-If you are using the mapper outside the storage you might not want multiple instances. You can pass
-an instance of a mapper in the builder like this:
-
-    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(new ExampleEntityMapper())
-        .build();
-    ...
+Using a custom serializer
+-------------------------
 
 Sometimes some type of fields in the database entity will not be a native data type that SlingerORM
 supports. You will then need to implement your custom serializer. Create a class and add
@@ -263,8 +285,6 @@ constructor anymore:
         .exampleEntityMapper(mapper)
         .build();
 
-And there you have it! Check the sample module in the source code for more examples.
-
 Download
 --------
 
@@ -285,7 +305,7 @@ You refer to it this way in gradle:
 License
 -------
 
-    Copyright 2014 David Laurell
+    Copyright 2015 David Laurell
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
