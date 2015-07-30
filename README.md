@@ -182,11 +182,29 @@ annotating it with "@DatabaseStorage":
 
     @DatabaseStorage
     public interface ExampleEntityStorage {
-        @Insert
-        void insert(SQLiteDatabase db, ExampleEntity complexEntity);
+        //annotate method with this to create a table based on the given entity class
+        @CreateTable(ExampleEntity.class)
+        void createTable(SQLiteDatabase db);
 
+        // slingerORM will insert the second parameter
+        @Insert
+        void insert(SQLiteDatabase db, ExampleEntity exampleEntity);
+
+        // slingerORM will update the entity in the second parameter
+        @Update
+        void update(SQLiteDatabase db, ExampleEntity exampleEntity);
+
+        // slingerorm will match the "?" with your parameters, starting with the second from the left
         @Select(where = "_id = ?")
         ExampleEntity getEntity(SQLiteDatabase db, long id);
+
+        // not setting any parameters on the annotation will cause it to use default and query all
+        @Select
+        List<ExampleEntity> getAll();
+
+        // orderBy and limit can be set in the annotation which will be part of the sql query
+        @Select(orderBy = "created DESC", limit = 5)
+        List<ExampleEntity> getLatest(SQLiteDatabase db);
     }
 
 To get the implementation of the interface simply add "Slinger" before the name of the interface and
@@ -225,9 +243,7 @@ DatabaseEntity annotation:
 
     @DatabaseEntity(serializer = MyCustomSerializer.class)
     public class ExampleEntity {
-      @PrimaryKey
-      public String Id;
-      public Date Created;
+        ...
     }
 
 The storage class will then require you to pass in the mapper because it doesn't have an empty
