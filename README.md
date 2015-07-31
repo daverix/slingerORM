@@ -95,8 +95,7 @@ Query:
         ExampleEntity readItem = new ExampleEntity();
         readItem.setId(cursor.getLong(0));
         readItem.setName(cursor.getString(1));
-
-        ... //Do something with readItem
+        return readItem;
     } finally {
         if(cursor != null) cursor.close();
     }
@@ -123,8 +122,9 @@ Query:
                 new String[] {
             String.valueOf(id)
         }, null, null, null, "1");
+        if(!cursor.moveToFirst()) return null;
 
-        return mapper.mapList(cursor);
+        return mapper.mapItem(cursor);
     } finally {
         if(cursor != null) cursor.close();
     }
