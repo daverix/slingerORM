@@ -23,8 +23,8 @@ import java.util.List;
 
 public interface Mapper<T> {
     /**
-     * Generates SQL for creating a table for the mapper type
-     * @return a generated sql statement
+     * Provides SQL for creating a table for the mapper type
+     * @return a sql query string
      */
     String createTable();
 
@@ -62,4 +62,18 @@ public interface Mapper<T> {
      * @return an instance of {@link List<T>} with mapped data from the cursor
      */
     List<T> mapList(Cursor cursor);
+
+    /**
+     * Provides SQL for updating and deleting an item by the primary key. Use it together with
+     * {@link #getItemQueryArguments(T)} to get the correct arguments.
+     * @return a sql query string
+     */
+    String getItemQuery();
+
+    /**
+     * Provides arguments for the sql query provided by {@link #getItemQuery()}
+     * @param item the item which should be updated or deleted
+     * @return an array of arguments
+     */
+    String[] getItemQueryArguments(T item);
 }

@@ -85,6 +85,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         String createTableSql = model.createTableSql();
         List<FieldMethod> setters = model.getSetters();
         List<FieldMethod> getters = model.getGetters();
+        String deleteSql = model.getItemSql();
+        String deleteSqlArgs = model.getItemSqlArgs();
 
         TypeElement serializerElement = model.getSerializerElement();
         String serializerQualifiedName = serializerElement.getQualifiedName().toString();
@@ -103,6 +105,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
                     .setFieldNames(model.getFieldNames())
                     .setSetters(setters)
                     .setGetters(getters)
+                    .setItemSql(deleteSql)
+                    .setItemSqlArguments(deleteSqlArgs)
                     .build();
         } finally {
             bw.close();

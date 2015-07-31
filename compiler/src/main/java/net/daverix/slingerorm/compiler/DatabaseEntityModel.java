@@ -691,6 +691,21 @@ class DatabaseEntityModel {
         return new WrappedFieldMethod("\"" + getDatabaseFieldName(field) + "\", ", findGetter(serializerTypeElement, field), "");
     }
 
+    public String getItemSql() throws InvalidElementException {
+        return getPrimaryKeyDbName() + "=?";
+    }
+
+    public String getItemSqlArgs() throws InvalidElementException {
+        Element primaryKeyField = getPrimaryKeyField();
+        FieldMethod directGetter = findDirectGetter(primaryKeyField);
+        if(ElementUtils.isString(primaryKeyField)) {
+            return "new String[]{" + directGetter.getMethod() + "}";
+        }
+        else {
+            return "new String[]{String.valueOf(" + directGetter.getMethod() + ")}";
+        }
+    }
+
     private class WrappedFieldMethod implements FieldMethod {
         private final String prefix;
         private final FieldMethod fieldMethod;

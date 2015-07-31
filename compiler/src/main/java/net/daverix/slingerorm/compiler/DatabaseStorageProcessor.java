@@ -33,7 +33,6 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -265,16 +264,6 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         return count;
     }
 
-    private Collection<String> getParameterNames(List<? extends VariableElement> parameters) {
-        if(parameters == null) throw new IllegalArgumentException("parameters is null");
-
-        List<String> parameterNames = new ArrayList<String>();
-        for(VariableElement variableElement : parameters) {
-            parameterNames.add(variableElement.getSimpleName().toString());
-        }
-        return parameterNames;
-    }
-
     private String getParameterText(List<? extends VariableElement> parameters) throws InvalidElementException {
         if(parameters == null) throw new IllegalArgumentException("parameters is null");
 
@@ -323,19 +312,12 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         checkSecondParameterMustBeDatabaseEntity(methodElement);
 
         TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
-        DatabaseEntityModel databaseEntityModel = new DatabaseEntityModel(databaseEntityElement, typeElementConverter);
-
-        String where = databaseEntityModel.getPrimaryKeyDbName() + "=?";
-        Element primaryKeyField = databaseEntityModel.getPrimaryKeyField();
-        FieldMethod directGetter = databaseEntityModel.findDirectGetter(primaryKeyField);
-        List<String> args = Collections.singletonList(directGetter.getMethod());
-
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new DeleteMethod(methodElement.getSimpleName().toString(),
                 databaseEntityElement.getSimpleName().toString(),
                 databaseEntityElement.getQualifiedName().toString(),
-                where, args, mapperDescription);
+                mapperDescription);
     }
 
     private StorageMethod createUpdateMethod(ExecutableElement methodElement) throws InvalidElementException {
@@ -345,19 +327,12 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         checkSecondParameterMustBeDatabaseEntity(methodElement);
 
         TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
-        DatabaseEntityModel databaseEntityModel = new DatabaseEntityModel(databaseEntityElement, typeElementConverter);
-
-        String where = databaseEntityModel.getPrimaryKeyDbName() + "=?";
-        Element primaryKeyField = databaseEntityModel.getPrimaryKeyField();
-        FieldMethod directGetter = databaseEntityModel.findDirectGetter(primaryKeyField);
-        List<String> args = Collections.singletonList(directGetter.getMethod());
-
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new UpdateMethod(methodElement.getSimpleName().toString(),
                 databaseEntityElement.getSimpleName().toString(),
                 databaseEntityElement.getQualifiedName().toString(),
-                where, args, mapperDescription);
+                mapperDescription);
     }
 
     private StorageMethod createReplaceMethod(ExecutableElement methodElement) throws InvalidElementException {

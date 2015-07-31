@@ -37,6 +37,8 @@ public class DatabaseEntityMapperBuilder {
     private String[] fieldNames;
     private List<FieldMethod> getters;
     private List<FieldMethod> setters;
+    private String itemSql;
+    private String itemSqlArguments;
 
     private DatabaseEntityMapperBuilder(Writer writer) {
         this.writer = writer;
@@ -86,6 +88,16 @@ public class DatabaseEntityMapperBuilder {
 
     public DatabaseEntityMapperBuilder setSetters(List<FieldMethod> setters) {
         this.setters = setters;
+        return this;
+    }
+
+    public DatabaseEntityMapperBuilder setItemSql(String itemSql) {
+        this.itemSql = itemSql;
+        return this;
+    }
+
+    public DatabaseEntityMapperBuilder setItemSqlArguments(String itemSqlArguments) {
+        this.itemSqlArguments = itemSqlArguments;
         return this;
     }
 
@@ -171,6 +183,18 @@ public class DatabaseEntityMapperBuilder {
         writer.write("            items.add(mapItem(cursor));\n");
         writer.write("        } while(cursor.moveToNext());\n");
         writer.write("        return items;\n");
+        writer.write("    }\n");
+        writeln();
+
+        writer.write("    @Override\n");
+        writer.write("    public String getItemQuery() {\n");
+        writer.write("        return \"" + itemSql + "\";\n");
+        writer.write("    }\n");
+        writeln();
+
+        writer.write("    @Override\n");
+        writer.write("    public String[] getItemQueryArguments(" + databaseEntityClassName + " item) {\n");
+        writer.write("        return " + itemSqlArguments + ";\n");
         writer.write("    }\n");
         writeln();
     }
