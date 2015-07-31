@@ -179,7 +179,7 @@ constructor anymore:
     Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
 
     SlingerStorage storage = new SlingerStorage(db);
-    storage.registerMapper(mapper);
+    storage.registerMapper(ExampleEntity.class, mapper);
     ...
 
 Download
