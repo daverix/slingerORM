@@ -26,6 +26,16 @@ public class ComplexEntity extends AbstractComplexEntity {
     @NotDatabaseField
     private String _ignoreThisField;
 
+    public ComplexEntity(long id, String name, double value, boolean complex) {
+        setId(id);
+        this._name = name;
+        this._value = value;
+        this._complex = complex;
+    }
+
+    public ComplexEntity() {
+    }
+
     @GetField("_name")
     public String getEntityName() {
         return _name;
