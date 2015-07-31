@@ -178,7 +178,7 @@ constructor anymore:
 
     Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
 
-    Storage storage = new SlingerStorage(db);
+    SlingerStorage storage = new SlingerStorage(db);
     storage.registerMapper(mapper);
     ...
 
