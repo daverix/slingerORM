@@ -102,7 +102,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
                     .setSerializerQualifiedName(serializerQualifiedName)
                     .setTableName(model.getTableName())
                     .setCreateTableSql(createTableSql)
-                    .setFieldNames(model.getFieldNames())
+                    .setColumnNames(model.getColumnNames())
                     .setSetters(setters)
                     .setGetters(getters)
                     .setItemSql(deleteSql)

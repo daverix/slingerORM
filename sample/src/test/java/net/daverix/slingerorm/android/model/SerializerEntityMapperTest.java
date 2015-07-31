@@ -44,9 +44,9 @@ public class SerializerEntityMapperTest {
     public void shouldGetDataFromCursor() {
         long id = 42;
         Date created = new Date();
-        String[] fieldNames = new String[] {"id", "created"};
+        String[] columnNames = new String[] {"id", "created"};
 
-        MatrixCursor cursor = new MatrixCursor(fieldNames);
+        MatrixCursor cursor = new MatrixCursor(columnNames);
         cursor.addRow(new Object[]{id, created.getTime()});
 
         cursor.moveToFirst();

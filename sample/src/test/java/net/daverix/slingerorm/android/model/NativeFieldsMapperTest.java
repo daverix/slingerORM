@@ -55,16 +55,16 @@ public class NativeFieldsMapperTest {
     }
 
     @Test
-    public void shouldGetCorrectFieldNames() {
+    public void shouldGetCorrectColumnNames() {
         List<String> expected = Arrays.asList("typeBoolean", "typeString", "typeDouble",
                 "typeFloat", "typeLong", "typeInt", "typeShort");
 
-        assertThat(sut.getFieldNames()).asList().containsExactlyElementsIn(expected);
+        assertThat(sut.getColumnNames()).asList().containsExactlyElementsIn(expected);
     }
 
     @Test
     public void shouldGetDataFromCursor() {
-        String[] fieldNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
+        String[] columnNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
                 "typeLong", "typeInt", "typeShort"};
 
         final NativeFieldsEntity expected = new NativeFieldsEntity();
@@ -76,7 +76,7 @@ public class NativeFieldsMapperTest {
         expected.setTypeInt(1337);
         expected.setTypeShort((short) 42);
 
-        MatrixCursor cursor = new MatrixCursor(fieldNames, 1);
+        MatrixCursor cursor = new MatrixCursor(columnNames, 1);
         cursor.addRow(createCursorRow(expected));
 
         cursor.moveToFirst();
@@ -86,7 +86,7 @@ public class NativeFieldsMapperTest {
 
     @Test
     public void shouldGetListDataFromCursor() {
-        String[] fieldNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
+        String[] columnNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
                 "typeLong", "typeInt", "typeShort"};
 
         final NativeFieldsEntity first = new NativeFieldsEntity();
@@ -107,7 +107,7 @@ public class NativeFieldsMapperTest {
         second.setTypeInt(2337);
         second.setTypeShort((short) 242);
 
-        MatrixCursor cursor = new MatrixCursor(fieldNames, 2);
+        MatrixCursor cursor = new MatrixCursor(columnNames, 2);
         cursor.addRow(createCursorRow(first));
         cursor.addRow(createCursorRow(second));
 

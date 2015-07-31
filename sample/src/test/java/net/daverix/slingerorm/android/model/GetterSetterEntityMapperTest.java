@@ -42,17 +42,17 @@ public class GetterSetterEntityMapperTest {
     }
 
     @Test
-    public void shouldGetCorrectFieldNames() {
+    public void shouldGetCorrectColumnNames() {
         List<String> expected = Arrays.asList("mId", "mNumber");
-        assertThat(sut.getFieldNames()).asList().containsExactlyElementsIn(expected);
+        assertThat(sut.getColumnNames()).asList().containsExactlyElementsIn(expected);
     }
 
     @Test
     public void shouldGetDataFromCursor() {
         String id = "apa";
         int number = 42;
-        String[] fieldNames = new String[] {"mId", "mNumber"};
-        MatrixCursor cursor = new MatrixCursor(fieldNames);
+        String[] columnNames = new String[] {"mId", "mNumber"};
+        MatrixCursor cursor = new MatrixCursor(columnNames);
         cursor.addRow(new Object[]{id, number});
 
         cursor.moveToFirst();

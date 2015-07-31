@@ -36,10 +36,10 @@ public abstract class Mapper<T> {
     public abstract String getTableName();
 
     /**
-     * Gets all fields for the given type that should be in the database table
-     * @return array of field names
+     * Gets all columns for the given type in the database table
+     * @return array of column names
      */
-    public abstract String[] getFieldNames();
+    public abstract String[] getColumnNames();
 
     /**
      * Pulls data from item and puts it into values

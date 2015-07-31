@@ -19,9 +19,9 @@ import net.daverix.slingerorm.annotation.*;
 
 @DatabaseEntity(name = "Complex", primaryKeyField = "_id")
 public class ComplexEntity extends AbstractComplexEntity {
-    @FieldName("name") private String _name;
-    @FieldName("value") private double _value;
-    @FieldName("isComplex") private boolean _complex;
+    @ColumnName("name") private String _name;
+    @ColumnName("value") private double _value;
+    @ColumnName("isComplex") private boolean _complex;
 
     @NotDatabaseField
     private String _ignoreThisField;

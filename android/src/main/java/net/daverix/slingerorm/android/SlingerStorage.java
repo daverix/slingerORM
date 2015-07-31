@@ -148,7 +148,7 @@ public class SlingerStorage implements Storage {
         public T first() {
             Cursor cursor = null;
             try {
-                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getFieldNames(), where, whereArgs, groupBy, having, orderBy, limit);
+                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getColumnNames(), where, whereArgs, groupBy, having, orderBy, limit);
                 if(cursor == null || !cursor.moveToFirst()) return null;
 
                 return mapper.mapItem(cursor);
@@ -161,7 +161,7 @@ public class SlingerStorage implements Storage {
         public List<T> toList() {
             Cursor cursor = null;
             try {
-                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getFieldNames(), where, whereArgs, groupBy, having, orderBy, limit);
+                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getColumnNames(), where, whereArgs, groupBy, having, orderBy, limit);
                 if(cursor == null) return new ArrayList<T>();
 
                 return mapper.mapList(cursor);

@@ -32,6 +32,11 @@ public class ComplexEntityStorageTest {
         sut.createTable(ComplexEntity.class);
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void shouldThrowErrorIfMapperIsNotRegistered() {
+        sut.createTable(Void.class);
+    }
+
     @Test
     public void shouldInsertThreeItemsAndGetThemBack() {
         ComplexEntity first = new ComplexEntity(1, "alpha", 1, true);

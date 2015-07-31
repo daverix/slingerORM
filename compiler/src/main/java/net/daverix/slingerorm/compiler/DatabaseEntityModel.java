@@ -18,7 +18,7 @@ package net.daverix.slingerorm.compiler;
 
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.DeserializeType;
-import net.daverix.slingerorm.annotation.FieldName;
+import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.GetField;
 import net.daverix.slingerorm.annotation.NotDatabaseField;
 import net.daverix.slingerorm.annotation.PrimaryKey;
@@ -64,11 +64,11 @@ class DatabaseEntityModel {
         return tableName;
     }
 
-    public String[] getFieldNames() throws InvalidElementException {
+    public String[] getColumnNames() throws InvalidElementException {
         List<Element> elements = getFieldsUsedInDatabase();
         String[] names = new String[elements.size()];
         for(int i=0;i<names.length;i++) {
-            names[i] = getDatabaseFieldName(elements.get(i));
+            names[i] = getDatabaseColumnName(elements.get(i));
         }
         return names;
     }
@@ -82,18 +82,18 @@ class DatabaseEntityModel {
         });
     }
 
-    private String getDatabaseFieldName(Element field) throws InvalidElementException {
+    private String getDatabaseColumnName(Element field) throws InvalidElementException {
         if(field == null) throw new IllegalArgumentException("field is null");
 
-        FieldName fieldNameAnnotation = field.getAnnotation(FieldName.class);
-        if(fieldNameAnnotation == null)
+        ColumnName columnNameAnnotation = field.getAnnotation(ColumnName.class);
+        if(columnNameAnnotation == null)
             return field.getSimpleName().toString();
 
-        String fieldName = fieldNameAnnotation.value();
-        if(fieldName == null || fieldName.equals(""))
-            throw new InvalidElementException("fieldName must not be null or empty!", field);
+        String columnName = columnNameAnnotation.value();
+        if(columnName == null || columnName.equals(""))
+            throw new InvalidElementException("columnName must not be null or empty!", field);
 
-        return fieldName;
+        return columnName;
     }
 
     public TypeElement getSerializerElement() {
@@ -120,9 +120,9 @@ class DatabaseEntityModel {
 
         for(int i=0;i<fields.size();i++) {
             final Element field = fields.get(i);
-            final String fieldName = getDatabaseFieldName(field);
+            final String columnName = getDatabaseColumnName(field);
             final String fieldType = getDatabaseType(field);
-            builder.append(fieldName).append(" ").append(fieldType);
+            builder.append(columnName).append(" ").append(fieldType);
             PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
             if( annotation != null || ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(field.getSimpleName().toString()) )) {
                 builder.append(" NOT NULL PRIMARY KEY");
@@ -143,7 +143,7 @@ class DatabaseEntityModel {
     }
 
     public String getPrimaryKeyDbName() throws InvalidElementException {
-        return getDatabaseFieldName(getPrimaryKeyField());
+        return getDatabaseColumnName(getPrimaryKeyField());
     }
 
     public Element getPrimaryKeyField() throws InvalidElementException {
@@ -656,7 +656,7 @@ class DatabaseEntityModel {
     }
 
     private String getColumnIndex(Element field) throws InvalidElementException {
-        return "cursor.getColumnIndex(\"" + getDatabaseFieldName(field) + "\")";
+        return "cursor.getColumnIndex(\"" + getDatabaseColumnName(field) + "\")";
     }
 
     public List<FieldMethod> getSetters() throws InvalidElementException {
@@ -688,7 +688,7 @@ class DatabaseEntityModel {
         if(field == null) throw new IllegalArgumentException("field is null");
 
         TypeElement serializerTypeElement = getSerializerElement();
-        return new WrappedFieldMethod("\"" + getDatabaseFieldName(field) + "\", ", findGetter(serializerTypeElement, field), "");
+        return new WrappedFieldMethod("\"" + getDatabaseColumnName(field) + "\", ", findGetter(serializerTypeElement, field), "");
     }
 
     public String getItemSql() throws InvalidElementException {

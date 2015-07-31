@@ -1,15 +1,15 @@
 package net.daverix.slingerorm.android.model;
 
 import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.FieldName;
+import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 
 @DatabaseEntity
 public class CustomFieldEntity {
-    @FieldName("Id") @PrimaryKey
+    @ColumnName("Id") @PrimaryKey
     private String id;
 
-    @FieldName("Name")
+    @ColumnName("Name")
     private String name;
 
     public String getId() {

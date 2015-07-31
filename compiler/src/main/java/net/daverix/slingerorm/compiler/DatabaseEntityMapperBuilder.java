@@ -34,7 +34,7 @@ public class DatabaseEntityMapperBuilder {
     private String packageName;
     private String createTableSql;
     private String tableName;
-    private String[] fieldNames;
+    private String[] columnNames;
     private List<FieldMethod> getters;
     private List<FieldMethod> setters;
     private String itemSql;
@@ -76,8 +76,8 @@ public class DatabaseEntityMapperBuilder {
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setFieldNames(String[] fieldNames) {
-        this.fieldNames = fieldNames;
+    public DatabaseEntityMapperBuilder setColumnNames(String[] columnNames) {
+        this.columnNames = columnNames;
         return this;
     }
 
@@ -144,8 +144,8 @@ public class DatabaseEntityMapperBuilder {
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public String[] getFieldNames() {\n");
-        writer.write("        return new String[] { " + String.join(", ", getCitedFieldNames()) + " };\n");
+        writer.write("    public String[] getColumnNames() {\n");
+        writer.write("        return new String[] { " + String.join(", ", getCitedColumnNames()) + " };\n");
         writer.write("    }\n");
         writeln();
 
@@ -186,10 +186,10 @@ public class DatabaseEntityMapperBuilder {
         writeln();
     }
 
-    private String[] getCitedFieldNames() {
-        String[] cited = new String[fieldNames.length];
+    private String[] getCitedColumnNames() {
+        String[] cited = new String[columnNames.length];
         for(int i=0;i<cited.length;i++) {
-            cited[i] = "\"" + fieldNames[i] + "\"";
+            cited[i] = "\"" + columnNames[i] + "\"";
         }
         return cited;
     }

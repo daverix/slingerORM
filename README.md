@@ -133,13 +133,13 @@ set and get methods with an annotation telling SlingerORM which field the method
     }
 
 If you don't want to have the names of the field in your class as the columns in your table, you
-can annotate these fields with @FieldName:
+can annotate these fields with @ColumnName:
 
     @DatabaseEntity
     public class ExampleEntity {
-      @FieldName("Id") @PrimaryKey
+      @ColumnName("Id") @PrimaryKey
       private String id;
-      @FieldName("Name")
+      @ColumnName("Name")
       private String name;
 
       ...

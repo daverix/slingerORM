@@ -114,7 +114,7 @@ public class SlingerStorageTest {
         String limit = "10";
 
         when(mapper.getTableName()).thenReturn(tableName);
-        when(mapper.getFieldNames()).thenReturn(fields);
+        when(mapper.getColumnNames()).thenReturn(fields);
 
         sut.select(TestEntity.class)
                 .distinct(true)
@@ -141,7 +141,7 @@ public class SlingerStorageTest {
         String limit = "10";
 
         when(mapper.getTableName()).thenReturn(tableName);
-        when(mapper.getFieldNames()).thenReturn(fields);
+        when(mapper.getColumnNames()).thenReturn(fields);
 
         sut.select(TestEntity.class)
                 .distinct(true)
@@ -171,7 +171,7 @@ public class SlingerStorageTest {
         );
 
         when(mapper.getTableName()).thenReturn(tableName);
-        when(mapper.getFieldNames()).thenReturn(fields);
+        when(mapper.getColumnNames()).thenReturn(fields);
         doAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) throws Throwable {

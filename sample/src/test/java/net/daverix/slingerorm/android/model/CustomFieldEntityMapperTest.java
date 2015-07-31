@@ -42,17 +42,17 @@ public class CustomFieldEntityMapperTest {
     }
 
     @Test
-    public void shouldGetCorrectFieldNames() {
+    public void shouldGetCorrectColumnNames() {
         List<String> expected = Arrays.asList("Id", "Name");
-        assertThat(sut.getFieldNames()).asList().containsExactlyElementsIn(expected);
+        assertThat(sut.getColumnNames()).asList().containsExactlyElementsIn(expected);
     }
 
     @Test
     public void shouldGetDataFromCursor() {
         String id = "banana";
         String name = "Code Monkey";
-        String[] fieldNames = new String[] {"Id", "Name"};
-        MatrixCursor cursor = new MatrixCursor(fieldNames);
+        String[] columnNames = new String[] {"Id", "Name"};
+        MatrixCursor cursor = new MatrixCursor(columnNames);
         cursor.addRow(new String[]{id, name});
 
         cursor.moveToFirst();
