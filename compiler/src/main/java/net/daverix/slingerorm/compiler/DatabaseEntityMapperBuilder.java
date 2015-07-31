@@ -108,7 +108,7 @@ public class DatabaseEntityMapperBuilder {
     }
 
     private void writeClass() throws IOException {
-        writer.write("public class " + databaseEntityClassName + "Mapper implements Mapper<" + databaseEntityClassName + "> {\n");
+        writer.write("public class " + databaseEntityClassName + "Mapper extends Mapper<" + databaseEntityClassName + "> {\n");
         if(!DefaultSerializer.class.getCanonicalName().equals(serializerQualifiedName)) {
             writer.write("    private final " + serializerClassName + " serializer;\n");
         }
@@ -170,19 +170,6 @@ public class DatabaseEntityMapperBuilder {
             writer.write("        item." + setter.getMethod() + ";\n");
         }
         writer.write("        return item;\n");
-        writer.write("    }\n");
-        writeln();
-
-        writer.write("    @Override\n");
-        writer.write("    public List<" + databaseEntityClassName + "> mapList(Cursor cursor) {\n");
-        writer.write("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");\n");
-        writer.write("        if(!cursor.moveToFirst()) return new ArrayList<" + databaseEntityClassName + ">();\n");
-        writeln();
-        writer.write("        List<" + databaseEntityClassName + "> items = new ArrayList<" + databaseEntityClassName + ">();\n");
-        writer.write("        do {;\n");
-        writer.write("            items.add(mapItem(cursor));\n");
-        writer.write("        } while(cursor.moveToNext());\n");
-        writer.write("        return items;\n");
         writer.write("    }\n");
         writeln();
 

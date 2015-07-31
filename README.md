@@ -7,7 +7,7 @@ generation to generate code against the database that you don't want to write ov
 Basic usage
 ----------
 
-The bare minimum that is needed for SlingerORM to work is an entity and an interface written by you:
+The bare minimum that is needed for SlingerORM to work is an entity written by you:
 
     @DatabaseEntity
     public class ExampleEntity {
@@ -32,35 +32,25 @@ The bare minimum that is needed for SlingerORM to work is an entity and an inter
         }
     }
 
-    @DatabaseStorage
-    public interface ExampleStorage {
-        @CreateTable(ExampleEntity.class)
-        void createTable(SQLiteDatabase db);
+Then a mapper class will be generated. The name of the mapper class is your entity's name and
+"Mapper" suffixed to it:
 
-        @Insert
-        void insert(SQLiteDatabase db, ExampleEntity entity);
+    Mapper<ExampleEntity> exampleEntityMapper = new ExampleEntityMapper();
 
-        @Delete
-        void delete(SQLiteDatabase db, ExampleEntity entity);
-
-        @Select
-        List<ExampleEntity> getAllExamples();
-    }
-
-Get an instance of your interface by accessing the generated builder by prefixing your interface
-name with "Slinger":
+To make database operations in Android, you use the SlingerStorage class like this:
 
     SQLiteDatabase db = ...
-    ExampleStorage storage = SlingerExampleStorage.builder().build();
+    SlingerStorage storage = new SlingerStorage(db);
+    storage.registerMapper(ExampleEntity.class, new ExampleEntityMapper());
 
-    storage.createTable(db);
+    storage.createTable(ExampleEntity.class);
 
     ExampleEntity entity = new ExampleEntity()
     entity.setId(42);
     entity.setName("David");
-    storage.insert(db, entity);
+    storage.insert(entity);
 
-    List<ExampleEntity> examples = storage.getAllExamples();
+    List<ExampleEntity> examples = storage.select(ExampleEntity.class).where("name LIKE ?", "D%").toList();
     ...
 
 
@@ -104,34 +94,6 @@ Writing that becomes tedious when having over hundred fields in your database ta
 have mapped. You will write the wrong field name or having to add even more code to put those into
 constants to be sure every field is mapped right. SlingerORM solves this problem by looking at
 annotations for your class that represents your database table and generate the code above for you!
-
-SlingerORM generates code using two annotation processors. The first generates a mapper class
-that you can use to map the tedious part in the example above:
-
-Insert:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
-    db.insertOrThrow(mapper.getTableName(), null, mapper.mapValues(item));
-
-Query:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
-    Cursor cursor = null;
-    try {
-        cursor = db.query(false, mapper.getTableName(), mapper.getFieldNames(), "_id = ?",
-                new String[] {
-            String.valueOf(id)
-        }, null, null, null, "1");
-        if(!cursor.moveToFirst()) return null;
-
-        return mapper.mapItem(cursor);
-    } finally {
-        if(cursor != null) cursor.close();
-    }
-
-The second annotation processor generates code for inserting, updating, deleting, querying etc
-depending on what methods you provide in your custom storage interface (as seen in the basic usage
-above)
 
 Configuring the DatabaseEntity
 ------------------------------
@@ -183,65 +145,6 @@ can annotate these fields with @FieldName:
       ...
     }
 
-Using the mapper standalone
----------------------------
-
-It's possible to use the database entity mapper and then do the quering etc yourself. You get an
-implementation of the Mapper interface by suffixing the database entity name with "Mapper":
-
-    Mapper<ExampleEntity> exampleEntityMapper = new ExampleEntityMapper();
-    ...
-
-Configuring the storage class
------------------------------
-
-The storage class uses one or more mappers that can be configured by calling methods in the builder.
-The number of mappers used for a storage depends on how many different database entities are used
-in the storage class:
-
-    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(new ExampleEntityMapper())
-        .otherExampleMapper(new OtherExampleMapper())
-        .build();
-    ...
-
-Here is some of the annotations that can be used on the methods in your storage interface:
-
-    @DatabaseStorage
-    public interface ExampleEntityStorage {
-        //annotate method with this to create a table based on the given entity class
-        @CreateTable(ExampleEntity.class)
-        void createTable(SQLiteDatabase db);
-
-        // slingerORM will insert the second parameter
-        @Insert
-        void insert(SQLiteDatabase db, ExampleEntity exampleEntity);
-
-        // slingerORM will update the entity in the second parameter
-        @Update
-        void update(SQLiteDatabase db, ExampleEntity exampleEntity);
-
-        //using an empty delete together with an "@DatabaseEntity" annotated class as parameter deletes the entity.
-        @Delete
-        void delete(SQLiteDatabase db, ExampleEntity exampleEntity);
-
-        //you can also specify "where" to delete everything that matches the given query
-        @Delete(where = "someVar = ?")
-        void deleteItemsWithSomeVar(SQLiteDatabase db, String someVar);
-
-        // slingerorm will match the "?" with your parameters, starting with the second from the left
-        @Select(where = "_id = ?")
-        ExampleEntity getEntity(SQLiteDatabase db, long id);
-
-        // not setting any parameters on the annotation will cause it to use default and query all
-        @Select
-        List<ExampleEntity> getAll();
-
-        // orderBy and limit can be set in the annotation which will be part of the sql query
-        @Select(orderBy = "created DESC", limit = 5)
-        List<ExampleEntity> getLatest(SQLiteDatabase db);
-    }
-
 Using a custom serializer
 -------------------------
 
@@ -270,14 +173,14 @@ DatabaseEntity annotation:
         ...
     }
 
-The storage class will then require you to pass in the mapper because it doesn't have an empty
+The mapper class will then require you to pass in the serializer because it doesn't have an empty
 constructor anymore:
 
     Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
 
-    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(mapper)
-        .build();
+    Storage storage = new SlingerStorage(db);
+    storage.registerMapper(mapper);
+    ...
 
 Download
 --------
