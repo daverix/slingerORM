@@ -149,9 +149,9 @@ Using a custom serializer
 -------------------------
 
 Sometimes some type of fields in the database entity will not be a native data type that SlingerORM
-supports. You will then need to implement your custom serializer. Create a class and add
-"@SerializeType" and "@DeserializeType" annotations to the methods. Deserialize methods will be
-called when getting data from the database and serialize methods will be called when inserting data:
+supports. You will then need to implement your custom serializer. Create a class and implement the
+Seralizer interface. The serialize method serializes the class field to a field that can be stored
+in the database. The deserialize method deserializes the data from the database to the class field.
 
     public class MyCustomSerializer implements Serializer<BigDecimal,Double> {
         public BigDecimal deserialize(Double value) {
