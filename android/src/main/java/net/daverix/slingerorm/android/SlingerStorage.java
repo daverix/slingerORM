@@ -19,8 +19,6 @@ package net.daverix.slingerorm.android;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import net.daverix.slingerorm.Storage;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +41,7 @@ public class SlingerStorage implements Storage {
         };
     }
 
+    @Override
     public <T> void registerMapper(Class<T> clazz, Mapper<T> mapper) {
         mappers.put(clazz, mapper);
     }

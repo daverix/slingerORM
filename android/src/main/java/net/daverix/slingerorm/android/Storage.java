@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm;
+package net.daverix.slingerorm.android;
 
 import java.util.List;
 
 public interface Storage {
+    <T> void registerMapper(Class<T> clazz, Mapper<T> mapper);
+
     <T> void createTable(Class<T> clazz);
 
     <T> SelectBuilder<T> select(Class<T> clazz);
