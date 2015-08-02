@@ -34,6 +34,13 @@ import static net.daverix.slingerorm.compiler.ListUtils.mapItems;
 
 final class ElementUtils {
     public static final String TYPE_STRING = "java.lang.String";
+    public static final String TYPE_DATE = "java.util.Date";
+    public static final String TYPE_INTEGER = "java.lang.Integer";
+    public static final String TYPE_SHORT = "java.lang.Short";
+    public static final String TYPE_LONG = "java.lang.Long";
+    public static final String TYPE_FLOAT = "java.lang.Float";
+    public static final String TYPE_DOUBLE = "java.lang.Double";
+    public static final String TYPE_BOOLEAN = "java.lang.Boolean";
 
     private ElementUtils(){}
 
@@ -108,6 +115,16 @@ final class ElementUtils {
         });
     }
 
+    public static ExecutableElement findMethodWithName(String name, TypeElement typeElement) throws InvalidElementException {
+        List<ExecutableElement> methods = getMethodsInTypeElement(typeElement);
+        for(ExecutableElement method : methods) {
+            if(name.equals(method.getSimpleName().toString())) {
+                return method;
+            }
+        }
+        return null;
+    }
+
     public static boolean isString(Element element) {
         TypeKind typeKind = getTypeKind(element);
         if(typeKind == TypeKind.DECLARED) {
@@ -115,6 +132,18 @@ final class ElementUtils {
             final TypeElement typeElement = (TypeElement) declaredType.asElement();
             final String typeName = typeElement.getQualifiedName().toString();
             return typeName.equals(ElementUtils.TYPE_STRING);
+        }
+
+        return false;
+    }
+
+    public static boolean isDate(Element element) {
+        TypeKind typeKind = getTypeKind(element);
+        if(typeKind == TypeKind.DECLARED) {
+            final DeclaredType declaredType = (DeclaredType) element.asType();
+            final TypeElement typeElement = (TypeElement) declaredType.asElement();
+            final String typeName = typeElement.getQualifiedName().toString();
+            return typeName.equals(ElementUtils.TYPE_DATE);
         }
 
         return false;

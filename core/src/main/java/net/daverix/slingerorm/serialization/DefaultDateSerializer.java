@@ -15,5 +15,16 @@
  */
 package net.daverix.slingerorm.serialization;
 
-public final class DefaultSerializer {
+import java.util.Date;
+
+public final class DefaultDateSerializer implements TypeSerializer<Date,Long> {
+    @Override
+    public Long serialize(Date in) {
+        return in != null ? in.getTime() : 0;
+    }
+
+    @Override
+    public Date deserialize(Long in) {
+        return new Date(in == null ? 0 : in);
+    }
 }

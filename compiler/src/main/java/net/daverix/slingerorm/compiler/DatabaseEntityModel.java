@@ -16,18 +16,20 @@
 
 package net.daverix.slingerorm.compiler;
 
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.DeserializeType;
 import net.daverix.slingerorm.annotation.ColumnName;
+import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.GetField;
 import net.daverix.slingerorm.annotation.NotDatabaseField;
 import net.daverix.slingerorm.annotation.PrimaryKey;
-import net.daverix.slingerorm.annotation.SerializeType;
+import net.daverix.slingerorm.annotation.Serializer;
 import net.daverix.slingerorm.annotation.SetField;
 
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.lang.model.element.Element;
@@ -36,703 +38,699 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
+import static net.daverix.slingerorm.compiler.ElementUtils.*;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_BOOLEAN;
 import static net.daverix.slingerorm.compiler.ElementUtils.getElementsInTypeElement;
+import static net.daverix.slingerorm.compiler.ElementUtils.getMethodsInTypeElement;
+import static net.daverix.slingerorm.compiler.ElementUtils.isAccessible;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
 
 class DatabaseEntityModel {
+    public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DefaultDateSerializer";
     private final TypeElement databaseTypeElement;
     private final TypeElementConverter typeElementConverter;
+    private final TypeElementProvider typeElementProvider;
+    private final PackageProvider packageProvider;
 
-    public DatabaseEntityModel(TypeElement databaseTypeElement, TypeElementConverter typeElementConverter) {
+    private final Map<String, Element> fieldsInUse = new HashMap<String, Element>();
+    private final Map<String, TypeElement> fieldSerializer = new HashMap<String, TypeElement>();
+    private final Map<String, Integer> fieldNameOccurrences = new HashMap<String, Integer>();
+
+    private String mapperPackageName;
+    private String mapperClassName;
+    private String databaseEntityClassName;
+    private String tableName;
+    private String createTableSql;
+    private String itemSql;
+
+    private final Map<String, String> getMethods = new HashMap<String, String>();
+    private final Map<String, String> annotatedGetMethods = new HashMap<String, String>();
+
+    private final Map<String, String> setMethods = new HashMap<String, String>();
+    private final Map<String, String> annotatedSetMethods = new HashMap<String, String>();
+
+    private final List<String> itemSqlArgFields = new ArrayList<String>();
+    private final Set<String> primaryKeyFields = new HashSet<String>();
+    private final Map<String, FieldAccess> fieldGetAccess = new HashMap<String, FieldAccess>();
+    private final Map<String, FieldAccess> fieldSetAccess = new HashMap<String, FieldAccess>();
+    private final Map<String, String> serializerFieldClassNames = new HashMap<String, String>();
+    private final Map<String, ColumnDataType> fieldDatabaseTypes = new HashMap<String, ColumnDataType>();
+    private final Map<String, CursorType> cursorTypes = new HashMap<String, CursorType>();
+    private final Map<String, String> columnNames = new HashMap<String, String>();
+    private final Set<String> serializerQualifiedNames = new HashSet<String>();
+    private final Map<String, String> fieldSerializerNames = new HashMap<String, String>();
+
+    public DatabaseEntityModel(TypeElement databaseTypeElement,
+                               TypeElementConverter typeElementConverter,
+                               TypeElementProvider typeElementProvider,
+                               PackageProvider packageProvider) {
         this.databaseTypeElement = databaseTypeElement;
         this.typeElementConverter = typeElementConverter;
+        this.typeElementProvider = typeElementProvider;
+        this.packageProvider = packageProvider;
     }
 
-    public String getTableName() throws InvalidElementException {
-        DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        if(annotation == null) throw new InvalidElementException("element not annotated with @DatabaseEntity", databaseTypeElement);
+    public void initialize() throws InvalidElementException {
+        findMapperPackageName();
+        findMapperClassName();
+        findEntityClassName();
+        findTableName();
+        findFieldsInUse();
 
-        String tableName = annotation.name();
-        if(tableName == null || tableName.equals(""))
-            return databaseTypeElement.getSimpleName().toString();
+        findGetFieldMethods();
+        findGetMethods();
+        findGetFieldAccess();
+        findSetFieldMethods();
+        findSetMethods();
+        findSetFieldAccess();
 
-        return tableName;
+        findPrimaryKeyFields();
+        findColumnNames();
+        findSerializers();
+        verifySerializersMatchFields();
+
+        findDatabaseTypesForFields();
+        findCursorTypesForFields();
+        generateCreateTableSql();
+        generateNamesForSerializers();
+        generateItemSql();
     }
 
-    public String[] getColumnNames() throws InvalidElementException {
-        List<Element> elements = getFieldsUsedInDatabase();
-        String[] names = new String[elements.size()];
-        for(int i=0;i<names.length;i++) {
-            names[i] = getDatabaseColumnName(elements.get(i));
+    private void findSetFieldMethods() throws InvalidElementException {
+        List<ExecutableElement> methods = getMethodsInTypeElement(databaseTypeElement);
+
+        for (ExecutableElement method : methods) {
+            SetField setField = method.getAnnotation(SetField.class);
+            if (setField != null) {
+                String fieldName = setField.value();
+                Element fieldElement = fieldsInUse.get(fieldName);
+                if (fieldElement == null) {
+                    throw new InvalidElementException("@SetField does not point to a valid field", method);
+                }
+
+                List<? extends VariableElement> methodParameters = method.getParameters();
+                if (methodParameters.size() != 1) {
+                    throw new InvalidElementException("@SetField method must have exactly one parameter", method);
+                }
+                VariableElement parameterElement = methodParameters.get(0);
+                if (!fieldElement.asType().equals(parameterElement.asType())) {
+                    throw new InvalidElementException("@SetField method parameter doesn't have the same type as the field it points to", method);
+                }
+
+                annotatedSetMethods.put(fieldName, method.getSimpleName().toString());
+            }
         }
-        return names;
     }
 
-    private List<Element> getFieldsUsedInDatabase() throws InvalidElementException {
-        return filter(getElementsInTypeElement(databaseTypeElement), new Predicate<Element>() {
+    private void findSetMethods() throws InvalidElementException {
+        List<ExecutableElement> methods = getMethodsInTypeElement(databaseTypeElement);
+
+        for (ExecutableElement method : methods) {
+            if (method.getAnnotation(SetField.class) != null) continue;
+
+            String simpleName = method.getSimpleName().toString();
+            if (simpleName.length() > 3 && "set".equals(simpleName.substring(0, 3))) {
+                String fieldName = simpleName.substring(3, 4).toLowerCase() + simpleName.substring(4);
+                Element fieldElement = fieldsInUse.get(fieldName);
+                if (fieldElement == null) {
+                    continue;
+                }
+
+                List<? extends VariableElement> methodParameters = method.getParameters();
+                if (methodParameters.size() != 1) {
+                    throw new InvalidElementException("set method must have one parameter", method);
+                }
+
+                VariableElement parameterElement = methodParameters.get(0);
+                if (!fieldElement.asType().equals(parameterElement.asType())) {
+                    throw new InvalidElementException("set method parameter doesn't have the same type as the field it points to", method);
+                }
+
+                setMethods.put(fieldName, method.getSimpleName().toString());
+            }
+        }
+    }
+
+    private void findSetFieldAccess() throws InvalidElementException {
+        for (String field : fieldsInUse.keySet()) {
+            if (annotatedSetMethods.containsKey(field)) {
+                fieldSetAccess.put(field, FieldAccess.ANNOTATED_METHOD);
+            } else if (setMethods.containsKey(field)) {
+                fieldSetAccess.put(field, FieldAccess.STANDARD_METHOD);
+            } else if (isAccessible(fieldsInUse.get(field))) {
+                fieldSetAccess.put(field, FieldAccess.FIELD);
+            } else {
+                throw new InvalidElementException("No way to access field in class, consider adding a set method or make the field public. The set method might need a @SetField annotation", fieldsInUse.get(field));
+            }
+        }
+    }
+
+    private void findGetMethods() throws InvalidElementException {
+        List<ExecutableElement> methods = getMethodsInTypeElement(databaseTypeElement);
+
+        for (ExecutableElement method : methods) {
+            if (method.getAnnotation(GetField.class) != null) continue;
+
+            String simpleName = method.getSimpleName().toString();
+            if (simpleName.length() > 3 && "get".equals(simpleName.substring(0, 3))) {
+                String fieldName = simpleName.substring(3, 4).toLowerCase() + simpleName.substring(4);
+                Element fieldElement = fieldsInUse.get(fieldName);
+                if (fieldElement == null) {
+                    continue;
+                }
+
+                if (!fieldElement.asType().equals(method.getReturnType())) {
+                    throw new InvalidElementException("get method does not return the same type as the field it points to", method);
+                }
+
+                getMethods.put(fieldName, method.getSimpleName().toString());
+            } else if (simpleName.length() > 2 && "is".equals(simpleName.substring(0, 2))) {
+                String fieldName = simpleName.substring(2, 3).toLowerCase() + simpleName.substring(3);
+                Element fieldElement = fieldsInUse.get(fieldName);
+                if (fieldElement == null) {
+                    continue;
+                }
+
+                if (fieldElement.asType().getKind() != TypeKind.BOOLEAN) {
+                    throw new InvalidElementException("is method must return boolean", method);
+                }
+
+                if (method.getReturnType().getKind() != TypeKind.BOOLEAN) {
+                    throw new InvalidElementException("is method must point to a boolean field", method);
+                }
+
+                getMethods.put(fieldName, method.getSimpleName().toString());
+            }
+        }
+    }
+
+
+    private void findGetFieldMethods() throws InvalidElementException {
+        List<ExecutableElement> methods = getMethodsInTypeElement(databaseTypeElement);
+
+        for (ExecutableElement method : methods) {
+            GetField getField = method.getAnnotation(GetField.class);
+            if (getField != null) {
+                String fieldName = getField.value();
+                Element fieldElement = fieldsInUse.get(fieldName);
+                if (fieldElement == null) {
+                    throw new InvalidElementException("GetField does not point to a valid field", method);
+                }
+
+                if (!fieldElement.asType().equals(method.getReturnType())) {
+                    throw new InvalidElementException("GetField method does not return the same type as the field it points to", method);
+                }
+
+                annotatedGetMethods.put(fieldName, method.getSimpleName().toString());
+            }
+        }
+    }
+
+    private void findGetFieldAccess() throws InvalidElementException {
+        for (String field : fieldsInUse.keySet()) {
+            if (annotatedGetMethods.containsKey(field)) {
+                fieldGetAccess.put(field, FieldAccess.ANNOTATED_METHOD);
+            } else if (getMethods.containsKey(field)) {
+                fieldGetAccess.put(field, FieldAccess.STANDARD_METHOD);
+            } else if (isAccessible(fieldsInUse.get(field))) {
+                fieldGetAccess.put(field, FieldAccess.FIELD);
+            } else {
+                throw new InvalidElementException("No way to access field in class, consider adding a get method or make the field public. The get method might need a @GetField annotation", fieldsInUse.get(field));
+            }
+        }
+    }
+
+    private void findMapperPackageName() {
+        mapperPackageName = packageProvider.getPackage(databaseTypeElement.getQualifiedName().toString());
+    }
+
+    private void findMapperClassName() {
+        mapperClassName = databaseTypeElement.getSimpleName() + "Mapper";
+    }
+
+    private void findEntityClassName() {
+        databaseEntityClassName = databaseTypeElement.getSimpleName().toString();
+    }
+
+    private void findTableName() throws InvalidElementException {
+        DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
+        String tableName = annotation.name();
+        if (tableName == null || tableName.equals("")) {
+            this.tableName = databaseTypeElement.getSimpleName().toString();
+        } else {
+            this.tableName = tableName;
+        }
+    }
+
+    private void findFieldsInUse() throws InvalidElementException {
+        List<Element> fields = filter(getElementsInTypeElement(databaseTypeElement), new Predicate<Element>() {
             @Override
             public boolean test(Element item) {
                 return item.getKind() == ElementKind.FIELD && isDatabaseField(item);
             }
         });
+
+        if (fields.size() == 0)
+            throw new InvalidElementException("Database Entity must have fields in order to be stored", databaseTypeElement);
+
+        for (Element field : fields) {
+            fieldsInUse.put(field.getSimpleName().toString(), field);
+        }
     }
 
-    private String getDatabaseColumnName(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
+    private boolean isDatabaseField(Element field) {
+        if (field == null) throw new IllegalArgumentException("field is null");
 
-        ColumnName columnNameAnnotation = field.getAnnotation(ColumnName.class);
-        if(columnNameAnnotation == null)
-            return field.getSimpleName().toString();
+        final Set<Modifier> modifiers = field.getModifiers();
 
-        String columnName = columnNameAnnotation.value();
-        if(columnName == null || columnName.equals(""))
-            throw new InvalidElementException("columnName must not be null or empty!", field);
+        if (modifiers.contains(Modifier.STATIC))
+            return false;
 
-        return columnName;
+        if (modifiers.contains(Modifier.TRANSIENT))
+            return false;
+
+        if (field.getAnnotation(NotDatabaseField.class) != null)
+            return false;
+
+        return true;
     }
 
-    public TypeElement getSerializerElement() {
+    private void findPrimaryKeyFields() throws InvalidElementException {
+        findPrimaryKeyFieldsInDatabaseEntityAnnotation();
+
+        if (primaryKeyFields.size() > 0) return;
+
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
+            if (element.getAnnotation(PrimaryKey.class) != null) {
+                primaryKeyFields.add(field);
+            }
+        }
+
+        if (primaryKeyFields.size() == 0) {
+            throw new InvalidElementException("No primary keys found in entity! Annotate fields with @PrimaryKey or set the primary keys in the annotation", databaseTypeElement);
+        }
+    }
+
+    private void findPrimaryKeyFieldsInDatabaseEntityAnnotation() throws InvalidElementException {
         DatabaseEntity databaseEntity = databaseTypeElement.getAnnotation(DatabaseEntity.class);
+        String[] fields = databaseEntity.primaryKeyFields();
+
+        if (fields == null || fields.length == 0)
+            return;
+
+        for (String field : fields) {
+            if (field == null || field.equals(""))
+                continue;
+
+            if (!fieldsInUse.containsKey(field)) {
+                throw new InvalidElementException(String.format("Field \"%s\"specified in DatabaseEntity as a primary key can't be found in the class or it's super class", field), databaseTypeElement);
+            }
+
+            primaryKeyFields.add(field);
+        }
+    }
+
+    private void findColumnNames() throws InvalidElementException {
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
+
+            ColumnName columnNameAnnotation = element.getAnnotation(ColumnName.class);
+            String columnName;
+            if (columnNameAnnotation == null) {
+                columnName = element.getSimpleName().toString();
+            } else {
+                columnName = columnNameAnnotation.value();
+            }
+
+            if (columnName == null || columnName.equals(""))
+                throw new InvalidElementException("columnName must not be null or empty!", element);
+
+            columnNames.put(field, columnName);
+        }
+    }
+
+    private void findSerializers() {
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
+            if (element.getAnnotation(Serializer.class) != null) {
+                fieldSerializer.put(field, getSerializerTypeElement(element));
+
+            } else if (isDate(element)) {
+                fieldSerializer.put(field, getDefaultDateSerializer());
+            }
+        }
+    }
+
+    private TypeElement getSerializerTypeElement(Element field) {
+        Serializer serializer = field.getAnnotation(Serializer.class);
         try {
-            databaseEntity.serializer();
+            serializer.value();
             throw new IllegalStateException("should never reach this line (this is a hack)");
         } catch (MirroredTypeException mte) {
             return typeElementConverter.asTypeElement(mte.getTypeMirror());
         }
     }
 
-    public String createTableSql() throws InvalidElementException {
-        final List<Element> fields = getFieldsUsedInDatabase();
-        if(fields.size() == 0)
-            throw new InvalidElementException("no fields found in " + databaseTypeElement.getSimpleName(), databaseTypeElement);
-        
-        StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(getTableName()).append("(");
-        
-        DatabaseEntity entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        String primaryKey = entityAnnotation.primaryKeyField();
+    private TypeElement getDefaultDateSerializer() {
+        return typeElementProvider.getTypeElement(DEFAULT_DATE_SERIALIZER);
+    }
 
-        boolean primaryKeySet = false;
+    private void verifySerializersMatchFields() throws InvalidElementException {
+        for (String field : fieldsInUse.keySet()) {
+            TypeElement serializerType = fieldSerializer.get(field);
+            if (serializerType == null) continue;
 
-        for(int i=0;i<fields.size();i++) {
-            final Element field = fields.get(i);
-            final String columnName = getDatabaseColumnName(field);
-            final String fieldType = getDatabaseType(field);
-            builder.append(columnName).append(" ").append(fieldType);
-            PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
-            if( annotation != null || ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(field.getSimpleName().toString()) )) {
-                builder.append(" NOT NULL PRIMARY KEY");
-                primaryKeySet = true;
-            }
+            ExecutableElement deserializeMethod = findMethodWithName("deserialize", serializerType);
+            if (deserializeMethod == null)
+                throw new IllegalStateException("deserialize method not found, how?");
 
-            if(i < fields.size() - 1) {
-                builder.append(", ");
-            }
+            Element fieldElement = fieldsInUse.get(field);
+            if (!isTypeMirrorEqual(fieldElement.asType(), deserializeMethod.getReturnType()))
+                throw new InvalidElementException(String.format("Serializer doesn't match the type of the field. Expected %s but got %s", fieldElement.asType(), deserializeMethod.getReturnType()), fieldElement);
+        }
+    }
+
+    private boolean isTypeMirrorEqual(TypeMirror typeMirror, TypeMirror other) {
+        if (typeMirror == other) return true;
+
+        if (typeMirror.equals(other)) return true;
+
+        if (typeMirror.getKind() == typeMirror.getKind() && typeMirror.getKind().isPrimitive())
+            return true;
+
+        if (typeMirror.getKind() == typeMirror.getKind() && typeMirror.getKind() == TypeKind.DECLARED) {
+            TypeElement typeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
+            TypeElement otherTypeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
+
+            return typeElement.equals(otherTypeElement);
         }
 
-        if(!primaryKeySet)
-            throw new InvalidElementException("Primary key not found when creating SQL for entity " + databaseTypeElement.getSimpleName(), databaseTypeElement);
-
-        builder.append(")");
-
-        return builder.toString();
+        return false;
     }
 
-    public String getPrimaryKeyDbName() throws InvalidElementException {
-        return getDatabaseColumnName(getPrimaryKeyField());
+    private void findDatabaseTypesForFields() throws InvalidElementException {
+        for (String field : columnNames.keySet()) {
+            TypeElement serializer = fieldSerializer.get(field);
+            Element typeElement;
+            if (serializer != null) {
+                typeElement = getSerializerDatabaseValueParameter(serializer);
+            } else {
+                typeElement = fieldsInUse.get(field);
+            }
+
+            fieldDatabaseTypes.put(field, getDatabaseType(typeElement));
+        }
     }
 
-    public Element getPrimaryKeyField() throws InvalidElementException {
-        List<Element> fields = getFieldsUsedInDatabase();
-        Element field = findSingleElementByAnnotation(fields, PrimaryKey.class);
-        if (field == null)
-            field = getPrimaryKeyFieldUsingDatabaseEntity(fields);
+    private TypeElement getSerializerDatabaseValueParameter(TypeElement serializerType) throws InvalidElementException {
+        ExecutableElement deserializeMethod = findMethodWithName("serialize", serializerType);
+        if (deserializeMethod == null)
+            throw new IllegalStateException("serialize method not found, how?");
 
-        if(field == null)
-            throw new InvalidElementException("There must be a field annotated with PrimaryKey or the key specified in @DatabaseEntity is empty!", databaseTypeElement);
-
-        return field;
+        return (TypeElement) ((DeclaredType) deserializeMethod.getReturnType()).asElement();
     }
 
-    private Element getPrimaryKeyFieldUsingDatabaseEntity(List<Element> validFields) throws InvalidElementException {
-        if(validFields == null) throw new IllegalArgumentException("validFields");
+    private ColumnDataType getDatabaseType(Element element) throws InvalidElementException {
+        if (element == null) throw new IllegalArgumentException("element is null");
 
-        DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        String key = annotation.primaryKeyField();
-        if(key == null || key.equals(""))
-            return null;
-
-        Element field = getFieldByName(validFields, key);
-        if(field == null)
-            throw new InvalidElementException("Field specified in DatabaseEntity annotation doesn't exist in entity class!", databaseTypeElement);
-
-        return field;
-    }
-
-    private boolean isDatabaseField(Element field) {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        final Set<Modifier> modifiers = field.getModifiers();
-
-        if(modifiers.contains(Modifier.STATIC))
-            return false;
-
-        if(modifiers.contains(Modifier.TRANSIENT))
-            return false;
-
-        if(field.getAnnotation(NotDatabaseField.class) != null)
-            return false;
-
-        return true;
-    }
-
-    private String getDatabaseType(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        TypeMirror fieldType = field.asType();
+        TypeMirror fieldType = element.asType();
         TypeKind typeKind = fieldType.getKind();
         switch (typeKind) {
             case BOOLEAN:
             case SHORT:
             case LONG:
             case INT:
+                return ColumnDataType.INTEGER;
             case FLOAT:
             case DOUBLE:
-                return getNativeTypeForDatabase(field);
-            case DECLARED:
-                DeclaredType declaredType = (DeclaredType) fieldType;
-                TypeElement typeElement = (TypeElement) declaredType.asElement();
-                String typeName = typeElement.getQualifiedName().toString();
-
-                if(typeName.equals(ElementUtils.TYPE_STRING)) {
-                    return getNativeTypeForDatabase(field);
-                }
-                else {
-                    TypeElement serializerTypeElement = getSerializerElement();
-                    return getDatabaseTypeFromMethodParameterInSerializer(getDeserializeMethodsInSerializer(serializerTypeElement), field);
-                }
-            default:
-                throw new InvalidElementException(field.getSimpleName() + " have a type not known by SlingerORM, solve this by creating a custom serializer", field);
-        }
-    }
-
-    private String getDatabaseTypeFromMethodParameterInSerializer(List<ExecutableElement> methods, Element field) throws InvalidElementException {
-        if(methods == null) throw new IllegalArgumentException("methods is null");
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        final ExecutableElement serializerMethod = getMethodInSerializerThatMatchesReturnTypeElement(methods, field);
-        final TypeMirror typeMirror = serializerMethod.getReturnType();
-        final TypeKind typeKind = typeMirror.getKind();
-        if(typeKind != TypeKind.DECLARED) {
-            throw new InvalidElementException("TypeKind should be declared but was " + typeKind, serializerMethod);
-        }
-
-        final DeclaredType declaredType = (DeclaredType) typeMirror;
-        final TypeElement typeElement = (TypeElement) declaredType.asElement();
-        final String typeName = typeElement.getQualifiedName().toString();
-        if(typeName.equals(ElementUtils.TYPE_STRING)) {
-            throw new InvalidElementException("String type should not be passed to this method", serializerMethod);
-        }
-
-        final List<? extends VariableElement> parameters = serializerMethod.getParameters();
-        if(parameters.size() != 1) {
-            throw new InvalidElementException("@DeserializeType/@SerializeType methods must have one parameter with a native type or String, got " + parameters.size() + " parameters for method " + serializerMethod.getSimpleName(), serializerMethod);
-        }
-
-        return getNativeTypeForDatabase(parameters.get(0));
-    }
-
-    private String getNativeTypeForDatabase(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        TypeMirror fieldType = field.asType();
-        TypeKind typeKind = fieldType.getKind();
-        switch (typeKind) {
-            case BOOLEAN:
-            case SHORT:
-            case LONG:
-            case INT:
-                return "INTEGER";
-            case FLOAT:
-            case DOUBLE:
-                return "REAL";
-            case DECLARED:
-                DeclaredType declaredType = (DeclaredType) fieldType;
-                TypeElement typeElement = (TypeElement) declaredType.asElement();
-                String typeName = typeElement.getQualifiedName().toString();
-
-                if(typeName.equals(ElementUtils.TYPE_STRING)) {
-                    return "TEXT";
-                }
-                else {
-                    throw new UnsupportedOperationException("this should only be called for native types and strings!");
-                }
-            default:
-                throw new InvalidElementException(field.getSimpleName() + " is unknown", field);
-        }
-    }
-
-    private List<ExecutableElement> getDeserializeMethodsInSerializer(TypeElement serializerTypeElement) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-
-        return filter(getMethodsInSerializer(serializerTypeElement), new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) {
-                return item.getAnnotation(DeserializeType.class) != null;
-            }
-        });
-    }
-
-    private ExecutableElement getMethodInSerializerThatMatchesReturnTypeElement(List<ExecutableElement> methods, Element field) throws InvalidElementException {
-        if(methods == null) throw new IllegalArgumentException("methods is null");
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        final String typeName = ElementUtils.getDeclaredTypeName(field);
-        final List<ExecutableElement> methodsWithCorrectReturnType = getMethodsWithReturnElement(methods, field);
-        if(methodsWithCorrectReturnType.size() < 1) {
-            throw new InvalidElementException("No @DeserializeType methods found with return type " + typeName, field);
-        }
-
-        if(methodsWithCorrectReturnType.size() > 1) {
-            throw new InvalidElementException("Return value of @DeserializeType/@SerializeType methods must be unique, there are " + methodsWithCorrectReturnType.size() + " with return type " + typeName, field);
-        }
-
-        return methodsWithCorrectReturnType.get(0);
-    }
-
-    private List<ExecutableElement> getMethodsInSerializer(TypeElement serializerTypeElement) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-
-        return ElementUtils.getMethodsInTypeElement(serializerTypeElement);
-    }
-
-    private List<ExecutableElement> getMethodsWithReturnElement(final List<ExecutableElement> methods, final Element element) throws InvalidElementException {
-        if(methods == null) throw new IllegalArgumentException("methods is null");
-        if(element == null) throw new IllegalArgumentException("element is null");
-
-        final TypeKind elementTypeKind = ElementUtils.getTypeKind(element);
-        final String elementTypeName = ElementUtils.getDeclaredTypeName(element);
-
-        return filter(methods, new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) {
-                final TypeMirror returnType = item.getReturnType();
-
-                if (!returnType.getKind().equals(elementTypeKind))
-                    return false;
-
-                switch (returnType.getKind()) {
-                    case DECLARED:
-                        final DeclaredType declaredType = (DeclaredType) returnType;
-                        final TypeElement returnTypeElement = (TypeElement) declaredType.asElement();
-                        final String returnTypeElementName = returnTypeElement.getQualifiedName().toString();
-
-                        return returnTypeElementName.equals(elementTypeName);
-                    default:
-                        return true;
-                }
-            }
-        });
-    }
-
-
-    private Element findSingleElementByAnnotation(List<Element> elements, final Class<? extends Annotation> annotationClass) throws InvalidElementException {
-        if(elements == null) throw new IllegalArgumentException("elements is null");
-        if(annotationClass == null) throw new IllegalArgumentException("annotationClass");
-
-        return ListUtils.firstOrDefault(filter(elements, new Predicate<Element>() {
-            @Override
-            public boolean test(Element item) {
-                return item.getAnnotation(annotationClass) != null;
-            }
-        }));
-    }
-
-    private Element getFieldByName(List<Element> fields, final String name) throws InvalidElementException {
-        if(fields == null) throw new IllegalArgumentException("fields is null");
-        if(name == null) throw new IllegalArgumentException("name is null");
-
-        return ListUtils.firstOrDefault(filter(fields, new Predicate<Element>() {
-            @Override
-            public boolean test(Element item) {
-                return name.equals(item.getSimpleName().toString());
-            }
-        }));
-    }
-
-    private FieldMethod findGetter(TypeElement serializerTypeElement, Element field) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        final TypeKind fieldTypeKind = ElementUtils.getTypeKind(field);
-        final ObjectType objectType = getObjectTypeForElement(fieldTypeKind, field);
-
-        switch (objectType) {
-            case BOOLEAN:
-            case DOUBLE:
-            case FLOAT:
-            case INT:
-            case LONG:
-            case SHORT:
-            case STRING:
-                return findDirectGetter(field);
-            case OTHER:
-                return findGetterInSerializer(serializerTypeElement, field);
-            default:
-                throw new UnsupportedOperationException("this should not be called!");
-        }
-    }
-
-    public FieldMethod findDirectGetter(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        List<ExecutableElement> methodsInDatabaseEntityElement = ElementUtils.getMethodsInTypeElement(databaseTypeElement);
-        ExecutableElement method = findMethodByFieldNameAndGetFieldAnnotation(methodsInDatabaseEntityElement, field.getSimpleName().toString());
-        if(method != null)
-            return new FieldMethodImpl("item." + method.getSimpleName() + "()");
-
-        boolean isBoolean = field.asType().getKind() == TypeKind.BOOLEAN;
-        method = findMethodByFieldNameOnly(methodsInDatabaseEntityElement, field.getSimpleName().toString(), isBoolean ? "is" : "get");
-        if(method != null)
-            return new FieldMethodImpl("item." + method.getSimpleName() + "()");
-
-        if (!ElementUtils.isAccessible(field))
-            throw new InvalidElementException("No get method or a public field for " + field.getSimpleName() + " in " + databaseTypeElement.getSimpleName(),
-                    databaseTypeElement);
-
-        return new FieldMethodImpl("item." + field.getSimpleName().toString());
-    }
-
-    private ExecutableElement findMethodByFieldNameOnly(List<ExecutableElement> methods, final String fieldName, final String prefix) throws InvalidElementException {
-        if(methods == null) throw new IllegalArgumentException("methods is null");
-        if(fieldName == null) throw new IllegalArgumentException("fieldName is null");
-        if(prefix == null) throw new IllegalArgumentException("prefix is null");
-
-        return ListUtils.firstOrDefault(filter(methods, new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) {
-                String firstLetter = fieldName.substring(0, 1).toUpperCase();
-                String methodName = prefix + firstLetter + fieldName.substring(1);
-
-                return methodName.equals(item.getSimpleName().toString());
-            }
-        }));
-    }
-
-    private ExecutableElement findMethodByFieldNameAndGetFieldAnnotation(List<ExecutableElement> elements, String fieldName) throws InvalidElementException {
-        if(elements == null) throw new IllegalArgumentException("elements is null");
-        if(fieldName == null) throw new IllegalArgumentException("fieldName is null");
-
-        for(ExecutableElement element : elements) {
-            GetField annotation = element.getAnnotation(GetField.class);
-            if(annotation == null)
-                continue;
-
-            String fieldReference = annotation.value();
-            if(fieldReference == null || fieldReference.equals(""))
-                throw new InvalidElementException(element.getSimpleName() + " has a GetField annotation with empty value!", element);
-
-            if(fieldReference.equals(fieldName))
-                return element;
-        }
-
-        return null;
-    }
-
-    private FieldMethod findGetterInSerializer(TypeElement serializerTypeElement, Element field) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        final List<ExecutableElement> methodsInSerializer = getSerializeMethodsInSerializer(serializerTypeElement);
-        final List<ExecutableElement> methods = getMethodsInSerializerThatMatchesParameterElementOfDeclaredType(methodsInSerializer, field);
-
-        if(methods.size() == 0) {
-            throw new InvalidElementException("No method found for field " + field.asType(), field);
-        }
-
-        if(methods.size() > 1) {
-            throw new InvalidElementException("Only one @SerializeType method per parameter type supported, found " + methods.size() + " methods with same parameter type in " + field.asType(),
-                    methods.get(0));
-        }
-
-        findDirectGetter(field);
-
-        FieldMethod getter = findDirectGetter(field);
-        return new WrappedFieldMethod("serializer." + methods.get(0).getSimpleName() + "(", getter, ")");
-    }
-
-    private List<ExecutableElement> getSerializeMethodsInSerializer(TypeElement serializerTypeElement) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-
-        return filter(getMethodsInSerializer(serializerTypeElement), new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) {
-                return item.getAnnotation(SerializeType.class) != null;
-            }
-        });
-    }
-
-    private List<ExecutableElement> getMethodsInSerializerThatMatchesParameterElementOfDeclaredType(List<ExecutableElement> methods, final Element element) throws InvalidElementException {
-        if(methods == null) throw new IllegalArgumentException("methods is null");
-        if(element == null) throw new IllegalArgumentException("element is null");
-
-        final TypeKind typeKind = ElementUtils.getTypeKind(element);
-        final ObjectType objectType = getObjectTypeForElement(typeKind, element);
-        if(objectType != ObjectType.OTHER)
-            throw new InvalidElementException("Element should be a declared type", element);
-
-        final DeclaredType parameterDeclaredType = (DeclaredType) element.asType();
-        final TypeElement parameterTypeElement = (TypeElement) parameterDeclaredType.asElement();
-        final String elementTypeName = parameterTypeElement.getQualifiedName().toString();
-
-        return filter(methods, new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) throws InvalidElementException {
-                final List<? extends VariableElement> parameters = item.getParameters();
-                if (parameters.size() != 1) {
-                    throw new InvalidElementException("@DeserializeType/@SerializeType methods must have one parameter, got " + parameters.size() + " parameters for method " + item.getSimpleName(), item);
-                }
-
-                final VariableElement variableElement = parameters.get(0);
-                final TypeKind parameterTypeKind = ElementUtils.getTypeKind(variableElement);
-
-                if (!typeKind.equals(parameterTypeKind))
-                    return false;
-
-                ObjectType paramterObjectType = getObjectTypeForElement(parameterTypeKind, element);
-                if (paramterObjectType != ObjectType.OTHER)
-                    return false;
-
-                final DeclaredType parameterDeclaredType = (DeclaredType) variableElement.asType();
-                final TypeElement parameterTypeElement = (TypeElement) parameterDeclaredType.asElement();
-                final String parameterTypeName = parameterTypeElement.getQualifiedName().toString();
-
-                return parameterTypeName.equals(elementTypeName);
-            }
-        });
-    }
-
-    private ObjectType getObjectTypeForElement(TypeKind typeKind, Element element) throws InvalidElementException {
-        if(typeKind == null) throw new IllegalArgumentException("typeKind is null");
-        if(element == null) throw new IllegalArgumentException("element is null");
-
-        switch (typeKind) {
-            case BOOLEAN:
-                return ObjectType.BOOLEAN;
-            case SHORT:
-                return ObjectType.SHORT;
-            case INT:
-                return ObjectType.INT;
-            case LONG:
-                return ObjectType.LONG;
-            case FLOAT:
-                return ObjectType.FLOAT;
-            case DOUBLE:
-                return ObjectType.DOUBLE;
-            case DECLARED:
-                final DeclaredType declaredType = (DeclaredType) element.asType();
-                final TypeElement typeElement = (TypeElement) declaredType.asElement();
-                final String typeName = typeElement.getQualifiedName().toString();
-                if(typeName.equals(ElementUtils.TYPE_STRING)) {
-                    return ObjectType.STRING;
-                }
-                else {
-                    return ObjectType.OTHER;
-                }
+                return ColumnDataType.REAL;
             case ARRAY:
-            case BYTE:
-            case CHAR:
-                throw new InvalidElementException(typeKind + " is not known by SlingerORM, solve this by creating a custom serializer method", element);
+                ArrayType arrayType = (ArrayType) fieldType;
+                TypeMirror componentType = arrayType.getComponentType();
+                if (componentType.getKind() == TypeKind.BYTE) {
+                    return ColumnDataType.BLOB;
+                } else {
+                    throw new InvalidElementException(String.format("Array of type %s is unknown, use a data type supported by SQLite or create a custom serializer", componentType), element);
+                }
+            case DECLARED:
+                DeclaredType declaredType = (DeclaredType) fieldType;
+                TypeElement typeElement = (TypeElement) declaredType.asElement();
+                String typeName = typeElement.getQualifiedName().toString();
+
+                if (typeName.equals(TYPE_STRING)) {
+                    return ColumnDataType.TEXT;
+                } else if (typeName.equals(TYPE_LONG) ||
+                        typeName.equals(TYPE_INTEGER) ||
+                        typeName.equals(TYPE_SHORT)) {
+                    return ColumnDataType.INTEGER;
+                } else if (typeName.equals(TYPE_DOUBLE) ||
+                        typeName.equals(TYPE_FLOAT)) {
+                    return ColumnDataType.REAL;
+                } else {
+                    throw new InvalidElementException(String.format("Type %s is unknown, use a data type supported by SQLite or create a custom serializer", typeElement), element);
+                }
             default:
-                throw new IllegalStateException(typeKind + " should never been reached, processor error?");
+                throw new InvalidElementException("Type not known by SlingerORM, solve this by creating a custom serializer", element);
         }
     }
 
-    private ExecutableElement findMethodByFieldNameAndSetFieldAnnotation(List<ExecutableElement> elements, String fieldName) throws InvalidElementException {
-        for(ExecutableElement element : elements) {
-            SetField annotation = element.getAnnotation(SetField.class);
-            if(annotation == null)
-                continue;
+    private void findCursorTypesForFields() throws InvalidElementException {
+        for (String field : columnNames.keySet()) {
+            TypeElement serializer = fieldSerializer.get(field);
+            Element typeElement;
+            if (serializer != null) {
+                typeElement = getSerializerDatabaseValueParameter(serializer);
+            } else {
+                typeElement = fieldsInUse.get(field);
+            }
 
-            String fieldReference = annotation.value();
-            if(fieldReference == null || fieldReference.equals(""))
-                throw new InvalidElementException(element.getSimpleName() + " has a SetField annotation with empty value!", element);
+            cursorTypes.put(field, getCursorType(typeElement));
+        }
+    }
 
-            if(fieldReference.equals(fieldName))
-                return element;
+    private CursorType getCursorType(Element element) throws InvalidElementException {
+        if (element == null) throw new IllegalArgumentException("element is null");
+
+        TypeMirror fieldType = element.asType();
+        TypeKind typeKind = fieldType.getKind();
+        switch (typeKind) {
+            case BOOLEAN:
+                return CursorType.BOOLEAN;
+            case SHORT:
+                return CursorType.SHORT;
+            case LONG:
+                return CursorType.LONG;
+            case INT:
+                return CursorType.INT;
+            case FLOAT:
+                return CursorType.FLOAT;
+            case DOUBLE:
+                return CursorType.DOUBLE;
+            case ARRAY:
+                ArrayType arrayType = (ArrayType) fieldType;
+                TypeMirror componentType = arrayType.getComponentType();
+                if (componentType.getKind() == TypeKind.BYTE) {
+                    return CursorType.BYTE_ARRAY;
+                } else {
+                    throw new InvalidElementException(String.format("Array of type %s can't be provided by an android cursor, use a custom serializer to solve this", componentType), element);
+                }
+            case DECLARED:
+                DeclaredType declaredType = (DeclaredType) fieldType;
+                TypeElement typeElement = (TypeElement) declaredType.asElement();
+                String typeName = typeElement.getQualifiedName().toString();
+
+                if (typeName.equals(TYPE_STRING)) {
+                    return CursorType.STRING;
+                } else if (typeName.equals(TYPE_LONG)) {
+                    return CursorType.LONG;
+                } else if (typeName.equals(TYPE_INTEGER)) {
+                    return CursorType.INT;
+                } else if (typeName.equals(TYPE_SHORT)) {
+                    return CursorType.SHORT;
+                } else if (typeName.equals(TYPE_DOUBLE)) {
+                    return CursorType.DOUBLE;
+                } else if(typeName.equals(TYPE_FLOAT)) {
+                    return CursorType.FLOAT;
+                } else if(typeName.equals(TYPE_BOOLEAN)) {
+                    return CursorType.BOOLEAN;
+                } else {
+                    throw new InvalidElementException(String.format("Type %s can't be provided by an android cursor, use a custom serializer to solve this", typeElement), element);
+                }
+            default:
+                throw new InvalidElementException("Type not known by SlingerORM, solve this by creating a custom serializer", element);
+        }
+    }
+
+    private void generateCreateTableSql() {
+        List<String> typeNamePairs = new ArrayList<String>();
+        List<String> primaryKeyColumns = new ArrayList<String>();
+        for (String field : fieldsInUse.keySet()) {
+            final String columnName = columnNames.get(field);
+            final String fieldType = fieldDatabaseTypes.get(field).name();
+
+            typeNamePairs.add(columnName + " " + fieldType);
+
+            if (primaryKeyFields.contains(field)) {
+                primaryKeyColumns.add(columnName);
+            }
         }
 
+        createTableSql = String.format("CREATE TABLE IF NOT EXISTS %s(%s, PRIMARY KEY(%s))",
+                getTableName(),
+                String.join(", ", typeNamePairs),
+                String.join(", ", primaryKeyColumns));
+    }
+
+    private void generateNamesForSerializers() {
+        Set<TypeElement> uniqueSerializerTypes = new HashSet<TypeElement>(fieldSerializer.values());
+
+        for (TypeElement serializerTypeElement : uniqueSerializerTypes) {
+            String simpleName = serializerTypeElement.getSimpleName().toString();
+            Integer occurrences = fieldNameOccurrences.get(simpleName);
+            String serializerFieldName;
+            if (occurrences == null || occurrences == 0) {
+                serializerFieldName = lowerCaseFirstCharacter(simpleName);
+                fieldNameOccurrences.put(simpleName, 1);
+            } else {
+                serializerFieldName = lowerCaseFirstCharacter(simpleName) + occurrences + 1;
+                fieldNameOccurrences.put(simpleName, occurrences + 1);
+            }
+
+            serializerFieldClassNames.put(serializerFieldName, serializerTypeElement.getSimpleName().toString());
+            serializerQualifiedNames.add(serializerTypeElement.getQualifiedName().toString());
+            fieldSerializerNames.put(findFieldNameForTypeElement(serializerTypeElement), serializerFieldName);
+        }
+    }
+
+    private String lowerCaseFirstCharacter(String input) {
+        if(input == null) throw new IllegalArgumentException("input is null");
+        if(input.length() < 2) throw new IllegalArgumentException("input is to small");
+
+        return input.substring(0, 1).toLowerCase() + input.substring(1);
+    }
+
+    private String findFieldNameForTypeElement(TypeElement typeElement) {
+        for (String field : fieldSerializer.keySet()) {
+            if (typeElement.equals(fieldSerializer.get(field))) {
+                return field;
+            }
+        }
         return null;
     }
 
-    private FieldMethod findSetter(TypeElement serializerTypeElement, Element field) throws InvalidElementException {
-        if(serializerTypeElement == null) throw new IllegalArgumentException("serializerTypeElement is null");
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        List<ExecutableElement> methodsInDatabaseEntityElement = ElementUtils.getMethodsInTypeElement(databaseTypeElement);
-        ExecutableElement method = findMethodByFieldNameAndSetFieldAnnotation(methodsInDatabaseEntityElement, field.getSimpleName().toString());
-        if(method != null) {
-            return findSetterMethodFromParameter(serializerTypeElement, method, field);
+    private void generateItemSql() {
+        List<String> expressions = new ArrayList<String>();
+        for (String field : primaryKeyFields) {
+            expressions.add(columnNames.get(field) + "=?");
+            itemSqlArgFields.add(field);
         }
-
-        method = findMethodByFieldNameOnly(methodsInDatabaseEntityElement, field.getSimpleName().toString(), "set");
-        if(method != null) {
-            return findSetterMethodFromParameter(serializerTypeElement, method, field);
-        }
-
-        if (!ElementUtils.isAccessible(field))
-            throw new InvalidElementException("No get method or a public field for " + field.getSimpleName() + " in " + databaseTypeElement.getSimpleName(), field);
-
-        return new WrappedFieldMethod(field.getSimpleName().toString() + " = ", findCursorMethod(serializerTypeElement, field, field), "");
+        itemSql = String.join(" AND ", expressions);
     }
 
-    private FieldMethod findSetterMethodFromParameter(TypeElement serializerTypeElement, ExecutableElement method, Element field) throws InvalidElementException {
-        if(method == null) throw new IllegalArgumentException("method is null");
-
-        List<? extends VariableElement> typeParameters = method.getParameters();
-        if(typeParameters.size() != 1)
-            throw new InvalidElementException(String.format("method has %d parameters, only 1 parameter supported!", typeParameters.size()), method);
-
-        return new WrappedFieldMethod(method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, typeParameters.get(0), field), ")");
+    public String getTableName() {
+        return tableName;
     }
 
-    private FieldMethod findCursorMethod(TypeElement serializerTypeElement, Element element, Element field) throws InvalidElementException {
-        if(element == null) throw new IllegalArgumentException("element is null");
-
-        final TypeKind fieldTypeKind = ElementUtils.getTypeKind(element);
-        final ObjectType objectType = getObjectTypeForElement(fieldTypeKind, element);
-
-        switch (objectType) {
-            case BOOLEAN:
-                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(field) + ") == 1");
-            case DOUBLE:
-                return new FieldMethodImpl("cursor.getDouble(" + getColumnIndex(field) + ")");
-            case FLOAT:
-                return new FieldMethodImpl("cursor.getFloat(" + getColumnIndex(field) + ")");
-            case INT:
-                return new FieldMethodImpl("cursor.getInt(" + getColumnIndex(field) + ")");
-            case LONG:
-                return new FieldMethodImpl("cursor.getLong(" + getColumnIndex(field) + ")");
-            case SHORT:
-                return new FieldMethodImpl("cursor.getShort(" + getColumnIndex(field) + ")");
-            case STRING:
-                return new FieldMethodImpl("cursor.getString(" + getColumnIndex(field) + ")");
-            case OTHER:
-                return findSetterInSerializer(serializerTypeElement, element, field);
-            default:
-                throw new UnsupportedOperationException("this should not be called!");
-        }
+    public Set<String> getFieldNames() {
+        return fieldsInUse.keySet();
     }
 
-    private FieldMethod findSetterInSerializer(TypeElement serializerTypeElement, Element element, Element field) throws InvalidElementException {
-        List<ExecutableElement> methodsInSerializer = getDeserializeMethodsInSerializer(serializerTypeElement);
-        final TypeElement typeElement = ElementUtils.getTypeElement(element);
-
-        List<ExecutableElement> methods = filter(methodsInSerializer, new Predicate<ExecutableElement>() {
-            @Override
-            public boolean test(ExecutableElement item) throws InvalidElementException {
-                TypeElement returnTypeElement = typeElementConverter.asTypeElement(item.getReturnType());
-                return typeElement.getQualifiedName().equals(returnTypeElement.getQualifiedName());
-            }
-        });
-        if(methods.size() == 0)
-            throw new InvalidElementException("SlingerORM doesn't know how to handle the type " + typeElement + ", consider providing your custom method in the serializer", element);
-
-        ExecutableElement method = methods.get(0);
-        List<? extends VariableElement> parameters = method.getParameters();
-        if(parameters.size() != 1)
-            throw new InvalidElementException("Methods in the serializer must have only one parameter!", method);
-
-        VariableElement parameter = parameters.get(0);
-        TypeKind typeKind = ElementUtils.getTypeKind(parameter);
-        if(!typeKind.isPrimitive() && getObjectTypeForElement(typeKind, parameter) != ObjectType.STRING)
-            throw new InvalidElementException("Only primitive types are supported as parameter in deserialize methods", method);
-
-        return new WrappedFieldMethod("serializer." + method.getSimpleName() + "(", findCursorMethod(serializerTypeElement, parameter, field), ")");
+    public Collection<String> getColumnNames() {
+        return columnNames.values();
     }
 
-    private String getColumnIndex(Element field) throws InvalidElementException {
-        return "cursor.getColumnIndex(\"" + getDatabaseColumnName(field) + "\")";
+    public String getMapperPackageName() {
+        return mapperPackageName;
     }
 
-    public List<FieldMethod> getSetters() throws InvalidElementException {
-        List<Element> fields = getFieldsUsedInDatabase();
-        List<FieldMethod> setters = new ArrayList<FieldMethod>();
-        for(Element field : fields) {
-            setters.add(createSetter(field));
-        }
-        return setters;
+    public String getMapperClassName() {
+        return mapperClassName;
     }
 
-    private FieldMethod createSetter(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        TypeElement serializerTypeElement = getSerializerElement();
-        return findSetter(serializerTypeElement, field);
+    public String getDatabaseEntityClassName() {
+        return databaseEntityClassName;
     }
 
-    public List<FieldMethod> getGetters() throws InvalidElementException {
-        List<Element> fields = getFieldsUsedInDatabase();
-        List<FieldMethod> setters = new ArrayList<FieldMethod>();
-        for(Element field : fields) {
-            setters.add(createGetter(field));
-        }
-        return setters;
+    public String getCreateTableSql() {
+        return createTableSql;
     }
 
-    private FieldMethod createGetter(Element field) throws InvalidElementException {
-        if(field == null) throw new IllegalArgumentException("field is null");
-
-        TypeElement serializerTypeElement = getSerializerElement();
-        return new WrappedFieldMethod("\"" + getDatabaseColumnName(field) + "\", ", findGetter(serializerTypeElement, field), "");
+    public Collection<String> getSerializerFieldNames() {
+        return serializerFieldClassNames.keySet();
     }
 
-    public String getItemSql() throws InvalidElementException {
-        return getPrimaryKeyDbName() + "=?";
+    public String getSerializerClassName(String serializerField) {
+        return serializerFieldClassNames.get(serializerField);
     }
 
-    public String getItemSqlArgs() throws InvalidElementException {
-        Element primaryKeyField = getPrimaryKeyField();
-        FieldMethod directGetter = findDirectGetter(primaryKeyField);
-        if(ElementUtils.isString(primaryKeyField)) {
-            return "new String[]{" + directGetter.getMethod() + "}";
-        }
-        else {
-            return "new String[]{String.valueOf(" + directGetter.getMethod() + ")}";
-        }
+    public Collection<String> getQualifiedNamesForSerializers() {
+        return serializerQualifiedNames;
     }
 
-    private class WrappedFieldMethod implements FieldMethod {
-        private final String prefix;
-        private final FieldMethod fieldMethod;
-        private final String suffix;
-
-        public WrappedFieldMethod(String prefix, FieldMethod fieldMethod, String suffix) {
-            this.prefix = prefix;
-            this.fieldMethod = fieldMethod;
-            this.suffix = suffix;
-        }
-
-        @Override
-        public String getMethod() {
-            return prefix + fieldMethod.getMethod() + suffix;
-        }
+    public String getItemSql() {
+        return itemSql;
     }
 
-    private class FieldMethodImpl implements FieldMethod {
-        private final String method;
+    public List<String> getItemSqlArgFields() {
+        return itemSqlArgFields;
+    }
 
-        public FieldMethodImpl(String method) {
-            this.method = method;
-        }
+    public FieldAccess getGetFieldAccess(String field) {
+        return fieldGetAccess.get(field);
+    }
 
-        @Override
-        public String getMethod() {
-            return method;
-        }
+    public FieldAccess getSetFieldAccess(String field) {
+        return fieldSetAccess.get(field);
+    }
+
+    public boolean hasSerializer(String field) {
+        return fieldSerializer.containsKey(field);
+    }
+
+    public String getColumnName(String field) {
+        return columnNames.get(field);
+    }
+
+    public String getSerializerFieldName(String field) {
+        return fieldSerializerNames.get(field);
+    }
+
+    public String getGetFieldAnnotatedMethod(String field) {
+        return annotatedGetMethods.get(field);
+    }
+
+    public String getStandardGetMethod(String field) {
+        return getMethods.get(field);
+    }
+
+    public ColumnDataType getColumnDataType(String field) {
+        return fieldDatabaseTypes.get(field);
+    }
+
+    public CursorType getCursorType(String field) {
+        return cursorTypes.get(field);
+    }
+
+    public String getSetFieldAnnotatedMethod(String field) {
+        return annotatedSetMethods.get(field);
+    }
+
+    public String getStandardSetMethod(String field) {
+        return setMethods.get(field);
+    }
+
+    public Set<String> getPrimaryKeyFields() {
+        return primaryKeyFields;
+    }
+
+    public boolean isFieldString(String field) {
+        return isString(fieldsInUse.get(field));
     }
 }

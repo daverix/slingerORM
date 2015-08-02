@@ -13,14 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.annotation;
+package net.daverix.slingerorm.android.serialization;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import net.daverix.slingerorm.serialization.TypeSerializer;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
-public @interface DeserializeType {
+import java.util.UUID;
+
+public class UuidSerializer implements TypeSerializer<UUID, String> {
+    @Override
+    public UUID deserialize(String id) {
+        return UUID.fromString(id);
+    }
+
+    @Override
+    public String serialize(UUID uuid) {
+        return uuid.toString();
+    }
 }

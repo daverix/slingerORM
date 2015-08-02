@@ -16,23 +16,27 @@
 
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.android.serialization.TestSerializer;
+import net.daverix.slingerorm.android.serialization.UuidSerializer;
+import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
+import net.daverix.slingerorm.annotation.Serializer;
 
 import java.util.Date;
+import java.util.UUID;
 
-@DatabaseEntity(serializer = TestSerializer.class)
+@DatabaseEntity
 public class SerializerEntity {
-    @PrimaryKey
-    private long id;
+    @Serializer(UuidSerializer.class) @PrimaryKey
+    private UUID id;
+    @ColumnName("_created")
     private Date created;
 
-    public long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

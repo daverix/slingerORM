@@ -22,7 +22,6 @@ import net.daverix.slingerorm.annotation.DatabaseEntity;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -47,13 +46,15 @@ import javax.tools.JavaFileObject;
 public class DatabaseEntityProcessor extends AbstractProcessor {
     private PackageProvider packageProvider;
     private TypeElementConverter typeElementConverter;
+    private TypeElementProvider typeElementProvider;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
 
         packageProvider = new PackageProvider();
-        typeElementConverter = new TypeElementConverterImpl(processingEnv);
+        typeElementConverter = new TypeElementConverterImpl(processingEnv.getTypeUtils());
+        typeElementProvider = new TypeElementProvider(processingEnv.getElementUtils());
     }
 
     @Override
@@ -66,7 +67,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             } catch (IOException e) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: " + e.getLocalizedMessage());
             } catch (InvalidElementException e) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: " + e.getMessage(), e.getElement());
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: " + e.getMessage() + " stacktrace: " + StacktraceUtils.getStackTraceString(e), e.getElement());
             } catch (Exception e) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Internal error: " + StacktraceUtils.getStackTraceString(e));
             }
@@ -77,37 +78,16 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     private void createMapper(PackageProvider packageProvider, TypeElementConverter typeElementConverter, TypeElement entity) throws IOException, InvalidElementException {
         if(entity == null) throw new IllegalArgumentException("entity is null");
 
-        DatabaseEntityModel model = new DatabaseEntityModel(entity, typeElementConverter);
+        DatabaseEntityModel model = new DatabaseEntityModel(entity, typeElementConverter, typeElementProvider, packageProvider);
+        model.initialize();
 
-        String qualifiedName = entity.getQualifiedName().toString();
-        String packageName = packageProvider.getPackage(qualifiedName);
-        String mapperName = entity.getSimpleName() + "Mapper";
-        String createTableSql = model.createTableSql();
-        List<FieldMethod> setters = model.getSetters();
-        List<FieldMethod> getters = model.getGetters();
-        String deleteSql = model.getItemSql();
-        String deleteSqlArgs = model.getItemSqlArgs();
-
-        TypeElement serializerElement = model.getSerializerElement();
-        String serializerQualifiedName = serializerElement.getQualifiedName().toString();
-        String serializerSimpleName = serializerElement.getSimpleName().toString();
+        String packageName = model.getMapperPackageName();
+        String mapperName = model.getMapperClassName();
 
         JavaFileObject jfo = processingEnv.getFiler().createSourceFile(packageName + "." + mapperName);
         BufferedWriter bw = new BufferedWriter(jfo.openWriter());
         try {
-            DatabaseEntityMapperBuilder.builder(bw)
-                    .setDatabaseEntityClassName(entity.getSimpleName().toString())
-                    .setPackageName(packageName)
-                    .setSerializerClassName(serializerSimpleName)
-                    .setSerializerQualifiedName(serializerQualifiedName)
-                    .setTableName(model.getTableName())
-                    .setCreateTableSql(createTableSql)
-                    .setColumnNames(model.getColumnNames())
-                    .setSetters(setters)
-                    .setGetters(getters)
-                    .setItemSql(deleteSql)
-                    .setItemSqlArguments(deleteSqlArgs)
-                    .build();
+            new DatabaseEntityMapperBuilder(bw, model).build();
         } finally {
             bw.close();
         }

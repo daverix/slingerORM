@@ -20,8 +20,9 @@ import android.content.ContentValues;
 import android.database.MatrixCursor;
 
 import net.daverix.slingerorm.android.Mapper;
-import net.daverix.slingerorm.android.serialization.TestSerializer;
+import net.daverix.slingerorm.android.serialization.UuidSerializer;
 import net.daverix.slingerorm.core.android.BuildConfig;
+import net.daverix.slingerorm.serialization.DefaultDateSerializer;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +31,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import java.util.Date;
+import java.util.UUID;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -40,30 +42,30 @@ public class SerializerEntityMapperTest {
 
     @Before
     public void before() {
-        sut = new SerializerEntityMapper(new TestSerializer());
+        sut = new SerializerEntityMapper(new DefaultDateSerializer(), new UuidSerializer());
     }
 
     @Test
     public void shouldSetCorrectContentValues() {
-        long id = 42;
+        UUID id = UUID.randomUUID();
         Date created = new Date();
         SerializerEntity entity = new SerializerEntity();
         entity.setId(id);
         entity.setCreated(created);
 
         ContentValues actual = sut.mapValues(entity);
-        assertThat(actual.getAsLong("id")).isEqualTo(id);
-        assertThat(actual.getAsLong("created")).isEqualTo(created.getTime());
+        assertThat(actual.getAsString("id")).isEqualTo(id.toString());
+        assertThat(actual.getAsLong("_created")).isEqualTo(created.getTime());
     }
 
     @Test
     public void shouldGetDataFromCursor() {
-        long id = 42;
+        UUID id = UUID.randomUUID();
         Date created = new Date();
-        String[] columnNames = new String[] {"id", "created"};
+        String[] columnNames = new String[] {"id", "_created"};
 
         MatrixCursor cursor = new MatrixCursor(columnNames);
-        cursor.addRow(new Object[]{id, created.getTime()});
+        cursor.addRow(new Object[]{id.toString(), created.getTime()});
 
         cursor.moveToFirst();
         SerializerEntity item = sut.mapItem(cursor);
