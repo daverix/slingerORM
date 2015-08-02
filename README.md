@@ -153,23 +153,23 @@ supports. You will then need to implement your custom serializer. Create a class
 "@SerializeType" and "@DeserializeType" annotations to the methods. Deserialize methods will be
 called when getting data from the database and serialize methods will be called when inserting data:
 
-    public class MyCustomSerializer {
-        @DeserializeType
-        public Date deserializeDate(long time) {
-            return new Date(time);
+    public class MyCustomSerializer implements Serializer<BigDecimal,Double> {
+        public BigDecimal deserialize(Double value) {
+            return new BigDecimal(value == null ? 0 : value);
         }
 
-        @SerializeType
-        public long serializeDate(Date date) {
-            return date.getTime();
+        public Double serialize(BigDecimal decimal) {
+            return decimal == null ? 0 : decimal.doubleValue();
         }
     }
 
-To tell SlingerORM which serializer to use for which entity, set the "serializer" field in
-DatabaseEntity annotation:
+To tell SlingerORM which serializer to use for which field, add a @Serializer annotation to a field
+in the entity class:
 
-    @DatabaseEntity(serializer = MyCustomSerializer.class)
+    @DatabaseEntity
     public class ExampleEntity {
+        @Serializer(MyCustomSerializer.class)
+        private BigDecimal myBigValue;
         ...
     }
 
