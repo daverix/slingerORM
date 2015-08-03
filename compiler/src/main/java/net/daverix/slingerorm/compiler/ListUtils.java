@@ -29,7 +29,7 @@ final class ListUtils {
         return mappedItems;
     }
 
-    public static <T> List<T> filter(List<T> items, Predicate<T> predicate) throws InvalidElementException {
+    public static <T> List<T> filter(List<T> items, Predicate<T> predicate) {
         List<T> filteredItems = new ArrayList<T>();
         for(T item : items) {
             if(predicate.test(item)) {

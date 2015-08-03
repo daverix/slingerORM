@@ -50,6 +50,7 @@ import static net.daverix.slingerorm.compiler.ElementUtils.getElementsInTypeElem
 import static net.daverix.slingerorm.compiler.ElementUtils.getMethodsInTypeElement;
 import static net.daverix.slingerorm.compiler.ElementUtils.isAccessible;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
+import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacter;
 
 class DatabaseEntityModel {
     public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DefaultDateSerializer";
@@ -607,13 +608,6 @@ class DatabaseEntityModel {
             serializerQualifiedNames.add(serializerTypeElement.getQualifiedName().toString());
             fieldSerializerNames.put(findFieldNameForTypeElement(serializerTypeElement), serializerFieldName);
         }
-    }
-
-    private String lowerCaseFirstCharacter(String input) {
-        if(input == null) throw new IllegalArgumentException("input is null");
-        if(input.length() < 2) throw new IllegalArgumentException("input is to small");
-
-        return input.substring(0, 1).toLowerCase() + input.substring(1);
     }
 
     private String findFieldNameForTypeElement(TypeElement typeElement) {

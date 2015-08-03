@@ -33,12 +33,7 @@ public class SlingerStorage implements Storage {
     }
 
     public SlingerStorage(final SQLiteDatabase db) {
-        this.dbp = new AbstractSQLiteDatabaseProxy() {
-            @Override
-            public SQLiteDatabase createDatabase() {
-                return db;
-            }
-        };
+        this.dbp = new SQLiteDatabaseProxy(db);
     }
 
     @Override

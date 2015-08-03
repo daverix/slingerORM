@@ -45,6 +45,7 @@ public class DatabaseEntityMapperBuilder {
         String databaseEntityClassName = entityModel.getDatabaseEntityClassName();
         Collection<String> serializerFields = entityModel.getSerializerFieldNames();
 
+        writer.write("@EntityMapper\n");
         writer.write("public class " + mapperClassName + " extends Mapper<" + databaseEntityClassName + "> {\n");
         for(String serializerField : serializerFields) {
             writeSerializerField(serializerField);
@@ -264,10 +265,9 @@ public class DatabaseEntityMapperBuilder {
     private void writeImports() throws IOException {
         Set<String> qualifiedNames = new HashSet<String>();
         qualifiedNames.add("net.daverix.slingerorm.android.Mapper");
+        qualifiedNames.add("net.daverix.slingerorm.internal.EntityMapper");
         qualifiedNames.add("android.content.ContentValues");
         qualifiedNames.add("android.database.Cursor");
-        qualifiedNames.add("java.util.List");
-        qualifiedNames.add("java.util.ArrayList");
         qualifiedNames.addAll(entityModel.getQualifiedNamesForSerializers());
 
         List<String> sortedNames = new ArrayList<String>(qualifiedNames);

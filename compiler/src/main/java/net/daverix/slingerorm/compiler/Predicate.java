@@ -16,5 +16,5 @@
 package net.daverix.slingerorm.compiler;
 
 interface Predicate<T> {
-    boolean test(T item) throws InvalidElementException;
+    boolean test(T item);
 }
