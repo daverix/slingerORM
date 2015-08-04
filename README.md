@@ -40,8 +40,7 @@ Then a mapper class will be generated. The name of the mapper class is your enti
 To make database operations in Android, you use the SlingerStorage class like this:
 
     SQLiteDatabase db = ...
-    SlingerStorage storage = new SlingerStorage(db);
-    storage.registerMapper(ExampleEntity.class, new ExampleEntityMapper());
+    SlingerStorage storage = new SlingerStorageBuilder().database(db).build();
 
     storage.createTable(ExampleEntity.class);
 
@@ -172,15 +171,6 @@ in the entity class:
         private BigDecimal myBigValue;
         ...
     }
-
-The mapper class will then require you to pass in the serializer because it doesn't have an empty
-constructor anymore:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
-
-    SlingerStorage storage = new SlingerStorage(db);
-    storage.registerMapper(ExampleEntity.class, mapper);
-    ...
 
 Download
 --------
