@@ -40,7 +40,7 @@ Then a mapper class will be generated. The name of the mapper class is your enti
 To make database operations in Android, you use the SlingerStorage class like this:
 
     SQLiteDatabase db = ...
-    SlingerStorage storage = new SlingerStorageBuilder().database(db).build();
+    Storage storage = new SlingerStorageBuilder().database(db).build();
 
     storage.createTable(ExampleEntity.class);
 
