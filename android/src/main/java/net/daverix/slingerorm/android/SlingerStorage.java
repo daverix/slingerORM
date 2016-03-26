@@ -19,6 +19,8 @@ package net.daverix.slingerorm.android;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import net.daverix.slingerorm.annotation.DatabaseEntity;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,15 +31,25 @@ public class SlingerStorage implements Storage {
     private final AbstractDatabaseProxy dbp;
 
     public SlingerStorage(AbstractDatabaseProxy dbp) {
+        if(dbp == null) throw new IllegalArgumentException("dbp is null");
+
         this.dbp = dbp;
     }
 
     public SlingerStorage(final SQLiteDatabase db) {
+        if(db == null) throw new IllegalArgumentException("db is null");
+
         this.dbp = new SQLiteDatabaseProxy(db);
     }
 
     @Override
     public <T> void registerMapper(Class<T> clazz, Mapper<T> mapper) {
+        if(clazz == null) throw new IllegalArgumentException("clazz is null");
+        if(mapper == null) throw new IllegalArgumentException("mapper is null");
+
+        if(!clazz.isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(clazz + " must be annotated with @DatabaseEntity");
+
         mappers.put(clazz, mapper);
     }
 
@@ -45,43 +57,79 @@ public class SlingerStorage implements Storage {
     private <T> Mapper<T> getMapper(Class<?> clazz) {
         Mapper<T> mapper = (Mapper<T>) mappers.get(clazz);
         if(mapper == null)
-            throw new IllegalStateException(String.format("Mapper for type %s not found, is the type annotated with @DatabaseEntity?", clazz.getCanonicalName()));
+            throw new IllegalStateException(String.format("Mapper for type %s not registered", clazz.getCanonicalName()));
 
         return mapper;
     }
 
     @Override
     public <T> void createTable(Class<T> clazz) {
+        if(clazz == null)
+            throw new IllegalArgumentException("clazz is null");
+
+        if(!clazz.isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(clazz + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(clazz);
         dbp.execSql(mapper.createTable());
     }
 
     @Override
     public <T> SelectBuilder<T> select(Class<T> clazz) {
+        if(clazz == null)
+            throw new IllegalArgumentException("clazz is null");
+
+        if(!clazz.isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(clazz + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(clazz);
         return new DatabaseProxySelectBuilder<T>(dbp, mapper);
     }
 
     @Override @SuppressWarnings("unchecked")
     public <T> void insert(T item) {
+        if(item == null)
+            throw new IllegalArgumentException("item is null");
+
+        if(!item.getClass().isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(item.getClass() + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(item.getClass());
         dbp.insert(mapper.getTableName(), mapper.mapValues(item));
     }
 
     @Override @SuppressWarnings("unchecked")
     public <T> void replace(T item) {
+        if(item == null)
+            throw new IllegalArgumentException("item is null");
+
+        if(!item.getClass().isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(item.getClass() + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(item.getClass());
         dbp.replace(mapper.getTableName(), mapper.mapValues(item));
     }
 
     @Override @SuppressWarnings("unchecked")
     public <T> int update(T item) {
+        if(item == null)
+            throw new IllegalArgumentException("item is null");
+
+        if(!item.getClass().isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(item.getClass() + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(item.getClass());
         return dbp.update(mapper.getTableName(), mapper.mapValues(item), mapper.getItemQuery(), mapper.getItemQueryArguments(item));
     }
 
     @Override @SuppressWarnings("unchecked")
     public <T> int delete(T item) {
+        if(item == null)
+            throw new IllegalArgumentException("item is null");
+
+        if(!item.getClass().isAnnotationPresent(DatabaseEntity.class))
+            throw new IllegalArgumentException(item.getClass() + " must be annotated with @DatabaseEntity");
+
         Mapper<T> mapper = getMapper(item.getClass());
         return dbp.delete(mapper.getTableName(), mapper.getItemQuery(), mapper.getItemQueryArguments(item));
     }
@@ -158,7 +206,7 @@ public class SlingerStorage implements Storage {
         public T first() {
             Cursor cursor = null;
             try {
-                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getColumnNames(), where, whereArgs, groupBy, having, orderBy, limit);
+                cursor = query();
                 if(cursor == null || !cursor.moveToFirst()) return null;
 
                 return mapper.mapItem(cursor);
@@ -171,13 +219,25 @@ public class SlingerStorage implements Storage {
         public List<T> toList() {
             Cursor cursor = null;
             try {
-                cursor = dbp.query(distinct, mapper.getTableName(), mapper.getColumnNames(), where, whereArgs, groupBy, having, orderBy, limit);
+                cursor = query();
                 if(cursor == null) return new ArrayList<T>();
 
                 return mapper.mapList(cursor);
             } finally {
                 if(cursor != null) cursor.close();
             }
+        }
+
+        private Cursor query() {
+            return dbp.query(distinct,
+                    mapper.getTableName(),
+                    mapper.getColumnNames(),
+                    where,
+                    whereArgs,
+                    groupBy,
+                    having,
+                    orderBy,
+                    limit);
         }
     }
 }

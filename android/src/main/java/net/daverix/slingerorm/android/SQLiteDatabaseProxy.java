@@ -44,7 +44,7 @@ public class SQLiteDatabaseProxy extends AbstractDatabaseProxy {
 
     @Override
     public void replace(String tableName, ContentValues values) {
-        db.replace(tableName, null, values);
+        db.replaceOrThrow(tableName, null, values);
     }
 
     @Override

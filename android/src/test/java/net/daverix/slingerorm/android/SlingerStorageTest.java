@@ -19,6 +19,9 @@ package net.daverix.slingerorm.android;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.MatrixCursor;
+import android.database.sqlite.SQLiteDatabase;
+
+import net.daverix.slingerorm.annotation.DatabaseEntity;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -45,7 +48,8 @@ public class SlingerStorageTest {
     private AbstractDatabaseProxy databaseProxy;
     private Mapper<TestEntity> mapper;
 
-    @Before @SuppressWarnings("unchecked")
+    @Before
+    @SuppressWarnings("unchecked")
     public void before() {
         mapper = mock(Mapper.class);
         databaseProxy = mock(AbstractDatabaseProxy.class);
@@ -53,8 +57,84 @@ public class SlingerStorageTest {
         sut.registerMapper(TestEntity.class, mapper);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void registerMapper_typeNull_throwIllegalArgumentException() {
+        sut.registerMapper(null, mock(Mapper.class));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    @SuppressWarnings("unchecked")
+    public void registerMapper_typeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.registerMapper(Object.class, mock(Mapper.class));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void registerMapper_mapperNull_throwIllegalArgumentException() {
+        sut.registerMapper(TestEntity.class, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void createTable_typeNull_throwIllegalArgumentException() {
+        sut.createTable(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void createTable_typeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.createTable(Object.class);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void insert_itemNull_throwIllegalArgumentException() {
+        sut.insert(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void insert_itemTypeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.insert(new Object());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void replace_itemNull_throwIllegalArgumentException() {
+        sut.replace(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void replace_itemTypeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.replace(new Object());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void update_itemNull_throwIllegalArgumentException() {
+        sut.update(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void update_itemTypeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.update(new Object());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void delete_itemNull_throwIllegalArgumentException() {
+        sut.delete(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void delete_itemTypeNotDatabaseEntity_throwIllegalArgumentException() {
+        sut.delete(new Object());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void select_typeNull_throwIllegalArgumentException() {
+        sut.select(null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void select_typeNotDatabase_throwIllegalArgumentException() {
+        sut.select(Object.class);
+    }
+
     @Test
-    public void shouldCallDatabaseProxyWhenCreatingTable() {
+    public void createTable_givenValidEntity_verifyProxyCalled() {
         String sql = "CREATE TABLE TestEntity (id PRIMARY KEY NOT NULL, name TEXT)";
         when(mapper.createTable()).thenReturn(sql);
         sut.createTable(TestEntity.class);
@@ -63,7 +143,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenInserting() {
+    public void insert_givenValidEntity_verifyProxyCalled() {
         String tableName = "TestEntity";
         when(mapper.getTableName()).thenReturn(tableName);
         ContentValues values = new ContentValues();
@@ -76,7 +156,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenReplacing() {
+    public void replace_givenValidEntity_verifyProxyCalled() {
         String tableName = "TestEntity";
         when(mapper.getTableName()).thenReturn(tableName);
         ContentValues values = new ContentValues();
@@ -89,7 +169,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenUpdating() {
+    public void update_givenValidEntity_verifyProxyCalled() {
         String tableName = "TestEntity";
         String where = "id = ?";
         String[] whereArgs = new String[]{"42"};
@@ -106,7 +186,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenDeleting() {
+    public void delete_givenValidEntity_verifyProxyCalled() {
         String tableName = "TestEntity";
         String where = "id = ?";
         String[] whereArgs = new String[]{"42"};
@@ -119,7 +199,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenSelectingList() {
+    public void selectWithToList_givenAllChainedMethods_verifyProxyCalled() {
         String tableName = "TestEntity";
         String[] fields = new String[] {"id", "name"};
         String where = "age > ?";
@@ -146,7 +226,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldCallDatabaseProxyWhenSelectingFirst() {
+    public void selectWithFirst_givenAllChainedMethods_verifyProxyCalled() {
         String tableName = "TestEntity";
         String[] fields = new String[] {"id", "name"};
         String where = "age > ?";
@@ -173,7 +253,7 @@ public class SlingerStorageTest {
     }
 
     @Test
-    public void shouldReturnListFromCursor() {
+    public void selectWithToList_givenValidEntityClass_returnMockedItems() {
         String tableName = "TestEntity";
         String[] fields = new String[] {"id", "name"};
         MatrixCursor cursor = new MatrixCursor(fields, 3);
@@ -202,6 +282,87 @@ public class SlingerStorageTest {
         assertThat(actual).containsExactlyElementsIn(expected);
     }
 
+    @Test
+    public void selectWithFirst_givenValidEntityClass_returnFirstItem() {
+        String tableName = "TestEntity";
+        String[] fields = new String[] {"id", "name"};
+        MatrixCursor cursor = new MatrixCursor(fields, 1);
+        cursor.addRow(new Object[]{1, "Alpha"});
+        final TestEntity expected = new TestEntity(1, "Alpha");
+
+        when(mapper.getTableName()).thenReturn(tableName);
+        when(mapper.getColumnNames()).thenReturn(fields);
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                return expected;
+            }
+        }).when(mapper).mapItem(cursor);
+        when(mapper.mapList((Cursor) anyObject())).thenCallRealMethod();
+        when(databaseProxy.query(false, tableName, fields, null, null, null, null, null, null)).thenReturn(cursor);
+
+        TestEntity actual = sut.select(TestEntity.class).first();
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void select_givenEntityMapperNotRegistered_throwIllegalStateException() {
+        sut.select(MyUnknownDatabaseEntity.class);
+    }
+
+    @DatabaseEntity
+    private class MyUnknownDatabaseEntity {
+
+    }
+
+    @Test
+    public void beginTransaction_verifyProxyCalled() {
+        sut.beginTransaction();
+
+        verify(databaseProxy).beginTransaction();
+    }
+
+    @Test
+    public void endTransaction_verifyProxyCalled() {
+        sut.endTransaction();
+
+        verify(databaseProxy).endTransaction();
+    }
+
+    @Test
+    public void setTransactionSuccessful_verifyProxyCalled() {
+        sut.setTransactionSuccessful();
+
+        verify(databaseProxy).setTransactionSuccessful();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void new_givenSQLiteDatabaseNull_throwIllegalArgumentException() {
+        new SlingerStorage((SQLiteDatabase) null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void new_givenProxyNull_throwIllegalArgumentException() {
+        new SlingerStorage((AbstractDatabaseProxy) null);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void new_givenSQLiteDatabase_verifyProxyCreated() {
+        SQLiteDatabase db = mock(SQLiteDatabase.class);
+        Mapper<TestEntity> mapper = mock(Mapper.class);
+
+        String sql = "CREATE TABLE TestEntity";
+        when(mapper.createTable()).thenReturn(sql);
+
+        SlingerStorage storage = new SlingerStorage(db);
+        storage.registerMapper(TestEntity.class, mapper);
+
+        storage.createTable(TestEntity.class);
+        verify(db).execSQL(sql);
+    }
+
+    @DatabaseEntity
     private class TestEntity {
         int id;
         String name;
