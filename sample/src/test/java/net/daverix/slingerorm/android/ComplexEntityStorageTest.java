@@ -50,7 +50,8 @@ public class ComplexEntityStorageTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldThrowErrorIfMapperIsNotRegistered() {
-        sut.createTable(Void.class);
+        sut = new SlingerStorage(db);
+        sut.createTable(ComplexEntity.class);
     }
 
     @Test

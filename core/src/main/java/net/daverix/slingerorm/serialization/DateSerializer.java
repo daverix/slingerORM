@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.android.serialization;
+package net.daverix.slingerorm.serialization;
 
-import net.daverix.slingerorm.serialization.TypeSerializer;
+import java.util.Date;
 
-import java.util.UUID;
-
-public class UuidSerializer implements TypeSerializer<UUID, String> {
+public final class DateSerializer implements TypeSerializer<Date,Long> {
     @Override
-    public UUID deserialize(String id) {
-        return UUID.fromString(id);
+    public Long serialize(Date in) {
+        return in != null ? in.getTime() : 0;
     }
 
     @Override
-    public String serialize(UUID uuid) {
-        return uuid.toString();
+    public Date deserialize(Long in) {
+        return new Date(in == null ? 0 : in);
     }
 }
