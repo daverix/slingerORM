@@ -46,7 +46,7 @@ public class DatabaseEntityMapperBuilder {
         Collection<String> serializerFields = entityModel.getSerializerFieldNames();
 
         writer.write("@EntityMapper\n");
-        writer.write("public class " + mapperClassName + " extends Mapper<" + databaseEntityClassName + "> {\n");
+        writer.write("public class " + mapperClassName + " implements Mapper<" + databaseEntityClassName + "> {\n");
         for(String serializerField : serializerFields) {
             writeSerializerField(serializerField);
         }

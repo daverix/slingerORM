@@ -275,7 +275,6 @@ public class SlingerStorageTest {
                 return expected.get(cursor.getPosition());
             }
         }).when(mapper).mapItem(cursor);
-        when(mapper.mapList((Cursor) anyObject())).thenCallRealMethod();
         when(databaseProxy.query(false, tableName, fields, null, null, null, null, null, null)).thenReturn(cursor);
 
         List<TestEntity> actual = sut.select(TestEntity.class).toList();
@@ -298,7 +297,6 @@ public class SlingerStorageTest {
                 return expected;
             }
         }).when(mapper).mapItem(cursor);
-        when(mapper.mapList((Cursor) anyObject())).thenCallRealMethod();
         when(databaseProxy.query(false, tableName, fields, null, null, null, null, null, null)).thenReturn(cursor);
 
         TestEntity actual = sut.select(TestEntity.class).first();

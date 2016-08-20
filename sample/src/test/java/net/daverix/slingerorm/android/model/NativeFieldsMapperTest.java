@@ -100,37 +100,6 @@ public class NativeFieldsMapperTest {
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test
-    public void shouldGetListDataFromCursor() {
-        String[] columnNames = new String[]{"typeBoolean", "typeString", "typeDouble", "typeFloat",
-                "typeLong", "typeInt", "typeShort"};
-
-        final NativeFieldsEntity first = new NativeFieldsEntity();
-        first.setTypeBoolean(true);
-        first.setTypeString("hello");
-        first.setTypeDouble(1.23456789010111213d);
-        first.setTypeFloat(1.234567f);
-        first.setTypeLong(1234567891011121314L);
-        first.setTypeInt(1337);
-        first.setTypeShort((short) 42);
-
-        final NativeFieldsEntity second = new NativeFieldsEntity();
-        second.setTypeBoolean(false);
-        second.setTypeString("hello2");
-        second.setTypeDouble(2.23456789010111213d);
-        second.setTypeFloat(2.234567f);
-        second.setTypeLong(2234567891011121314L);
-        second.setTypeInt(2337);
-        second.setTypeShort((short) 242);
-
-        MatrixCursor cursor = new MatrixCursor(columnNames, 2);
-        cursor.addRow(createCursorRow(first));
-        cursor.addRow(createCursorRow(second));
-
-        List<NativeFieldsEntity> actual = sut.mapList(cursor);
-        assertThat(actual).containsExactlyElementsIn(Arrays.asList(first, second));
-    }
-
     private Object[] createCursorRow(NativeFieldsEntity entity) {
         return new Object[] {
                 (short) (entity.isTypeBoolean() ? 1 : 0),
