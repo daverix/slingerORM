@@ -85,11 +85,8 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         String mapperName = model.getMapperClassName();
 
         JavaFileObject jfo = processingEnv.getFiler().createSourceFile(packageName + "." + mapperName);
-        BufferedWriter bw = new BufferedWriter(jfo.openWriter());
-        try {
-            new DatabaseEntityMapperBuilder(bw, model).build();
-        } finally {
-            bw.close();
+        try (BufferedWriter bw = new BufferedWriter(jfo.openWriter())) {
+            new DatabaseEntityMapperBuilder(bw).build(model);
         }
     }
 }

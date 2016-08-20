@@ -222,7 +222,11 @@ public class SlingerStorage implements Storage {
                 cursor = query();
                 if(cursor == null) return new ArrayList<T>();
 
-                return mapList(mapper, cursor);
+                List<T> items = new ArrayList<T>();
+                while(cursor.moveToNext()) {
+                    items.add(mapper.mapItem(cursor));
+                }
+                return items;
             } finally {
                 if(cursor != null) cursor.close();
             }
@@ -239,23 +243,5 @@ public class SlingerStorage implements Storage {
                     orderBy,
                     limit);
         }
-    }
-
-    /**
-     * Pulls data from cursor and creates instances for each position iterating through the cursor
-     * until it's on the last position. Cursor will be moved to the first position automatically.
-     * @param mapper the mapper to map single items from
-     * @param cursor a standard {@link Cursor}
-     * @return an instance of {@link List<T>} with mapped data from the cursor
-     */
-    public static <T> List<T> mapList(Mapper<T> mapper, Cursor cursor) {
-        if(cursor == null) throw new IllegalArgumentException("cursor is null");
-        if(!cursor.moveToFirst()) return new ArrayList<T>();
-
-        List<T> items = new ArrayList<T>();
-        do {
-            items.add(mapper.mapItem(cursor));
-        } while(cursor.moveToNext());
-        return items;
     }
 }

@@ -44,11 +44,19 @@ import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import static net.daverix.slingerorm.compiler.ElementUtils.*;
 import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_BOOLEAN;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_DOUBLE;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_FLOAT;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_INTEGER;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_LONG;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_SHORT;
+import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_STRING;
+import static net.daverix.slingerorm.compiler.ElementUtils.findMethodWithName;
 import static net.daverix.slingerorm.compiler.ElementUtils.getElementsInTypeElement;
 import static net.daverix.slingerorm.compiler.ElementUtils.getMethodsInTypeElement;
 import static net.daverix.slingerorm.compiler.ElementUtils.isAccessible;
+import static net.daverix.slingerorm.compiler.ElementUtils.isDate;
+import static net.daverix.slingerorm.compiler.ElementUtils.isString;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacter;
 
@@ -62,20 +70,10 @@ class DatabaseEntityModel {
     private final Map<String, Element> fieldsInUse = new HashMap<String, Element>();
     private final Map<String, TypeElement> fieldSerializer = new HashMap<String, TypeElement>();
     private final Map<String, Integer> fieldNameOccurrences = new HashMap<String, Integer>();
-
-    private String mapperPackageName;
-    private String mapperClassName;
-    private String databaseEntityClassName;
-    private String tableName;
-    private String createTableSql;
-    private String itemSql;
-
     private final Map<String, String> getMethods = new HashMap<String, String>();
     private final Map<String, String> annotatedGetMethods = new HashMap<String, String>();
-
     private final Map<String, String> setMethods = new HashMap<String, String>();
     private final Map<String, String> annotatedSetMethods = new HashMap<String, String>();
-
     private final List<String> itemSqlArgFields = new ArrayList<String>();
     private final Set<String> primaryKeyFields = new HashSet<String>();
     private final Map<String, FieldAccess> fieldGetAccess = new HashMap<String, FieldAccess>();
@@ -86,6 +84,13 @@ class DatabaseEntityModel {
     private final Map<String, String> columnNames = new HashMap<String, String>();
     private final Set<String> serializerQualifiedNames = new HashSet<String>();
     private final Map<String, String> fieldSerializerNames = new HashMap<String, String>();
+    private final Map<String, DatabaseEntityModel> subModels = new HashMap<String, DatabaseEntityModel>();
+    private String mapperPackageName;
+    private String mapperClassName;
+    private String databaseEntityClassName;
+    private String tableName;
+    private String createTableSql;
+    private String itemSql;
 
     public DatabaseEntityModel(TypeElement databaseTypeElement,
                                TypeElementConverter typeElementConverter,
@@ -103,6 +108,11 @@ class DatabaseEntityModel {
         findEntityClassName();
         findTableName();
         findFieldsInUse();
+        findPrimaryKeyFields();
+        findSubModels();
+        findColumnNames();
+
+        initializeSubModels();
 
         findGetFieldMethods();
         findGetMethods();
@@ -111,8 +121,6 @@ class DatabaseEntityModel {
         findSetMethods();
         findSetFieldAccess();
 
-        findPrimaryKeyFields();
-        findColumnNames();
         findSerializers();
         verifySerializersMatchFields();
 
@@ -121,6 +129,32 @@ class DatabaseEntityModel {
         generateCreateTableSql();
         generateNamesForSerializers();
         generateItemSql();
+    }
+
+    private void findSubModels() throws InvalidElementException {
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
+            TypeMirror typeMirror = element.asType();
+            if (typeMirror.getKind() != TypeKind.DECLARED)
+                continue;
+
+            TypeElement typeElement = typeElementConverter.asTypeElement(typeMirror);
+            if (typeElement == null) {
+                throw new InvalidElementException("Cannot get type from field", element);
+            }
+            if (typeElement.getAnnotation(DatabaseEntity.class) != null) {
+                subModels.put(field, new DatabaseEntityModel(typeElement,
+                        typeElementConverter,
+                        typeElementProvider,
+                        packageProvider));
+            }
+        }
+    }
+
+    private void initializeSubModels() throws InvalidElementException {
+        for (DatabaseEntityModel model : subModels.values()) {
+            model.initialize();
+        }
     }
 
     private void findSetFieldMethods() throws InvalidElementException {
@@ -438,16 +472,31 @@ class DatabaseEntityModel {
 
     private void findDatabaseTypesForFields() throws InvalidElementException {
         for (String field : columnNames.keySet()) {
-            TypeElement serializer = fieldSerializer.get(field);
-            Element typeElement;
-            if (serializer != null) {
-                typeElement = getSerializerDatabaseValueParameter(serializer);
-            } else {
-                typeElement = fieldsInUse.get(field);
+            ColumnDataType databaseType = getDatabaseTypeForField(field);
+
+            fieldDatabaseTypes.put(field, databaseType);
+        }
+    }
+
+    public ColumnDataType getDatabaseTypeForField(String field) throws InvalidElementException {
+        TypeElement serializer = fieldSerializer.get(field);
+        ColumnDataType databaseType;
+        if (serializer != null) {
+            databaseType = getDatabaseType(getSerializerDatabaseValueParameter(serializer));
+        } else if (subModels.containsKey(field)) {
+            DatabaseEntityModel databaseEntityModel = subModels.get(field);
+            Set<String> primaryKeyFields = databaseEntityModel.getPrimaryKeyFields();
+            if (primaryKeyFields.size() != 1) {
+                throw new InvalidElementException("Only one primary key is supported when adding DatabaseEntity types", fieldsInUse.get(field));
             }
 
-            fieldDatabaseTypes.put(field, getDatabaseType(typeElement));
+            //TODO: add support for multiple keys by specifying them in an annotation?
+            String primaryKeyField = new ArrayList<String>(primaryKeyFields).get(0);
+            databaseType = databaseEntityModel.getDatabaseTypeForField(primaryKeyField);
+        } else {
+            databaseType = getDatabaseType(fieldsInUse.get(field));
         }
+        return databaseType;
     }
 
     private TypeElement getSerializerDatabaseValueParameter(TypeElement serializerType) throws InvalidElementException {
@@ -504,16 +553,31 @@ class DatabaseEntityModel {
 
     private void findCursorTypesForFields() throws InvalidElementException {
         for (String field : columnNames.keySet()) {
-            TypeElement serializer = fieldSerializer.get(field);
-            Element typeElement;
-            if (serializer != null) {
-                typeElement = getSerializerDatabaseValueParameter(serializer);
-            } else {
-                typeElement = fieldsInUse.get(field);
+            CursorType cursorType = getCursorTypeForField(field);
+
+            cursorTypes.put(field, cursorType);
+        }
+    }
+
+    public CursorType getCursorTypeForField(String field) throws InvalidElementException {
+        TypeElement serializer = fieldSerializer.get(field);
+        CursorType cursorType;
+        if (serializer != null) {
+            cursorType = getCursorType(getSerializerDatabaseValueParameter(serializer));
+        } else if (subModels.containsKey(field)) {
+            DatabaseEntityModel databaseEntityModel = subModels.get(field);
+            Set<String> primaryKeyFields = databaseEntityModel.getPrimaryKeyFields();
+            if (primaryKeyFields.size() != 1) {
+                throw new InvalidElementException("Only one primary key is supported when adding DatabaseEntity types", fieldsInUse.get(field));
             }
 
-            cursorTypes.put(field, getCursorType(typeElement));
+            //TODO: add support for multiple keys by specifying them in an annotation?
+            String primaryKeyField = new ArrayList<String>(primaryKeyFields).get(0);
+            cursorType = databaseEntityModel.getCursorTypeForField(primaryKeyField);
+        } else {
+            cursorType = getCursorType(fieldsInUse.get(field));
         }
+        return cursorType;
     }
 
     private CursorType getCursorType(Element element) throws InvalidElementException {
@@ -557,9 +621,9 @@ class DatabaseEntityModel {
                     return CursorType.SHORT;
                 } else if (typeName.equals(TYPE_DOUBLE)) {
                     return CursorType.DOUBLE;
-                } else if(typeName.equals(TYPE_FLOAT)) {
+                } else if (typeName.equals(TYPE_FLOAT)) {
                     return CursorType.FLOAT;
-                } else if(typeName.equals(TYPE_BOOLEAN)) {
+                } else if (typeName.equals(TYPE_BOOLEAN)) {
                     return CursorType.BOOLEAN;
                 } else {
                     throw new InvalidElementException(String.format("Type %s can't be provided by an android cursor, use a custom serializer to solve this", typeElement), element);
@@ -704,10 +768,6 @@ class DatabaseEntityModel {
         return getMethods.get(field);
     }
 
-    public ColumnDataType getColumnDataType(String field) {
-        return fieldDatabaseTypes.get(field);
-    }
-
     public CursorType getCursorType(String field) {
         return cursorTypes.get(field);
     }
@@ -726,5 +786,13 @@ class DatabaseEntityModel {
 
     public boolean isFieldString(String field) {
         return isString(fieldsInUse.get(field));
+    }
+
+    public boolean isDatabaseEntity(String field) {
+        return subModels.containsKey(field);
+    }
+
+    public DatabaseEntityModel getDatabaseEntity(String field) {
+        return subModels.get(field);
     }
 }
