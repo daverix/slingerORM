@@ -36,6 +36,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.NestingKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
@@ -43,6 +44,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 
 import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_BOOLEAN;
 import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_DOUBLE;
@@ -64,7 +66,7 @@ class DatabaseEntityModel {
     public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DefaultDateSerializer";
     private final TypeElement databaseTypeElement;
     private final TypeElementConverter typeElementConverter;
-    private final TypeElementProvider typeElementProvider;
+    private final Elements typeElementProvider;
     private final PackageProvider packageProvider;
 
     private final Map<String, Element> fieldsInUse = new HashMap<String, Element>();
@@ -94,7 +96,7 @@ class DatabaseEntityModel {
 
     public DatabaseEntityModel(TypeElement databaseTypeElement,
                                TypeElementConverter typeElementConverter,
-                               TypeElementProvider typeElementProvider,
+                               Elements typeElementProvider,
                                PackageProvider packageProvider) {
         this.databaseTypeElement = databaseTypeElement;
         this.typeElementConverter = typeElementConverter;
@@ -302,16 +304,33 @@ class DatabaseEntityModel {
     }
 
     private void findMapperPackageName() {
-        mapperPackageName = packageProvider.getPackage(databaseTypeElement.getQualifiedName().toString());
+        mapperPackageName = typeElementProvider.getPackageOf(databaseTypeElement).getQualifiedName().toString();
     }
 
     private void findMapperClassName() {
-        if(databaseTypeElement.getEnclosingElement())
         mapperClassName = databaseTypeElement.getSimpleName() + "Mapper";
     }
 
-    private void findEntityClassName() {
-        databaseEntityClassName = databaseTypeElement.getSimpleName().toString();
+    private void findEntityClassName() throws InvalidElementException {
+        databaseEntityClassName = getEntityClassName(databaseTypeElement);
+    }
+
+    private String getEntityClassName(TypeElement typeElement) throws InvalidElementException {
+        if(typeElement.getNestingKind() == NestingKind.TOP_LEVEL) {
+            return typeElement.getSimpleName().toString();
+        }
+
+        if(!typeElement.getModifiers().contains(Modifier.STATIC)) {
+            throw new InvalidElementException("Class must be static in order for SlingerORM to be able to instantiate it", typeElement);
+        }
+
+        Element enclosingElement = typeElement.getEnclosingElement();
+        if(enclosingElement.getKind() == ElementKind.CLASS) {
+            TypeElement enclosingTypeElement = typeElementConverter.asTypeElement(enclosingElement.asType());
+            return getEntityClassName(enclosingTypeElement) + "." + typeElement.getSimpleName().toString();
+        }
+
+        return "";
     }
 
     private void findTableName() throws InvalidElementException {

@@ -50,7 +50,7 @@ public class DatabaseEntityMapperBuilder {
         }
         writeln();
 
-        writer.write("    public " + databaseEntityClassName + "Mapper(" + getConstructorParameterText(entityModel) + ") {\n");
+        writer.write("    public " + mapperClassName + "(" + getConstructorParameterText(entityModel) + ") {\n");
         for(String serializerField : serializerFields) {
             writeIllegalArgumentForSerializer(serializerField);
         }

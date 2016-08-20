@@ -310,7 +310,7 @@ public class SlingerStorageTest {
     }
 
     @DatabaseEntity
-    private class MyUnknownDatabaseEntity {
+    static class MyUnknownDatabaseEntity {
         @PrimaryKey String hello;
     }
 

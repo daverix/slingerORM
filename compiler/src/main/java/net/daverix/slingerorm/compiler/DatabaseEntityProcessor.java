@@ -46,7 +46,6 @@ import javax.tools.JavaFileObject;
 public class DatabaseEntityProcessor extends AbstractProcessor {
     private PackageProvider packageProvider;
     private TypeElementConverter typeElementConverter;
-    private TypeElementProvider typeElementProvider;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -54,7 +53,6 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
 
         packageProvider = new PackageProvider();
         typeElementConverter = new TypeElementConverterImpl(processingEnv.getTypeUtils());
-        typeElementProvider = new TypeElementProvider(processingEnv.getElementUtils());
     }
 
     @Override
@@ -78,7 +76,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
     private void createMapper(PackageProvider packageProvider, TypeElementConverter typeElementConverter, TypeElement entity) throws IOException, InvalidElementException {
         if(entity == null) throw new IllegalArgumentException("entity is null");
 
-        DatabaseEntityModel model = new DatabaseEntityModel(entity, typeElementConverter, typeElementProvider, packageProvider);
+        DatabaseEntityModel model = new DatabaseEntityModel(entity, typeElementConverter, processingEnv.getElementUtils(), packageProvider);
         model.initialize();
 
         String packageName = model.getMapperPackageName();
