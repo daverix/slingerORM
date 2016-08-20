@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.mapper;
 
 import android.content.ContentValues;
 import android.database.MatrixCursor;
 
+import net.daverix.slingerorm.android.BuildConfig;
 import net.daverix.slingerorm.android.Mapper;
-import net.daverix.slingerorm.core.android.BuildConfig;
+import net.daverix.slingerorm.android.entities.MyObject;
+import net.daverix.slingerorm.android.entities.MyObjectSerializer;
+import net.daverix.slingerorm.android.entities.SerializerEntity;
+import net.daverix.slingerorm.android.entities.SerializerEntityMapper;
+import net.daverix.slingerorm.serialization.DateSerializer;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -28,53 +33,46 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Date;
 
 import static com.google.common.truth.Truth.assertThat;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(constants = BuildConfig.class, manifest = Config.NONE)
-public class CustomFieldEntityMapperTest {
-    private Mapper<CustomFieldEntity> sut;
+public class SerializerEntityMapperTest {
+    private Mapper<SerializerEntity> sut;
 
     @Before
     public void before() {
-        sut = new CustomFieldEntityMapper();
+        sut = new SerializerEntityMapper(new MyObjectSerializer(), new DateSerializer());
     }
 
     @Test
     public void shouldSetCorrectContentValues() {
-        String id = "dl";
-        String name = "David Laurell";
-        CustomFieldEntity entity = new CustomFieldEntity();
+        MyObject id = new MyObject("asdasdasd");
+        Date created = new Date();
+        SerializerEntity entity = new SerializerEntity();
         entity.setId(id);
-        entity.setName(name);
+        entity.setCreated(created);
 
-        ContentValues values = sut.mapValues(entity);
-
-        assertThat(values.getAsString("Id")).isEqualTo(id);
-        assertThat(values.getAsString("Name")).isEqualTo(name);
-    }
-
-    @Test
-    public void shouldGetCorrectColumnNames() {
-        List<String> expected = Arrays.asList("Id", "Name");
-        assertThat(sut.getColumnNames()).asList().containsExactlyElementsIn(expected);
+        ContentValues actual = sut.mapValues(entity);
+        assertThat(actual.getAsString("id")).isEqualTo("asdasdasd");
+        assertThat(actual.getAsLong("_created")).isEqualTo(created.getTime());
     }
 
     @Test
     public void shouldGetDataFromCursor() {
-        String id = "banana";
-        String name = "Code Monkey";
-        String[] columnNames = new String[] {"Id", "Name"};
+        MyObject id = new MyObject("sadsd2323");
+        Date created = new Date();
+        String[] columnNames = new String[] {"id", "_created"};
+
         MatrixCursor cursor = new MatrixCursor(columnNames);
-        cursor.addRow(new String[]{id, name});
+        cursor.addRow(new Object[]{"sadsd2323", created.getTime()});
 
         cursor.moveToFirst();
-        CustomFieldEntity item = sut.mapItem(cursor);
+        SerializerEntity item = sut.mapItem(cursor);
 
         assertThat(item.getId()).isEqualTo(id);
-        assertThat(item.getName()).isEqualTo(name);
+        assertThat(item.getCreated()).isEqualTo(created);
     }
 }

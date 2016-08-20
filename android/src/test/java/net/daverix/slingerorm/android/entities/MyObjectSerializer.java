@@ -1,4 +1,4 @@
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.entities;
 
 import net.daverix.slingerorm.serialization.TypeSerializer;
 

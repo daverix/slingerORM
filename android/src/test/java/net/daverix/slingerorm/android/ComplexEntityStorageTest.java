@@ -18,8 +18,8 @@ package net.daverix.slingerorm.android;
 
 import android.database.sqlite.SQLiteDatabase;
 
-import net.daverix.slingerorm.android.model.ComplexEntity;
-import net.daverix.slingerorm.android.model.ComplexEntityMapper;
+import net.daverix.slingerorm.android.entities.ComplexEntity;
+import net.daverix.slingerorm.android.entities.ComplexEntityMapper;
 
 import org.junit.Before;
 import org.junit.Test;

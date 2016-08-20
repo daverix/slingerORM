@@ -1,4 +1,4 @@
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.entities;
 
 public class MyObject {
     private final String myValue;

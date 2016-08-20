@@ -1,10 +1,13 @@
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.mapper;
 
 import android.content.ContentValues;
 import android.database.MatrixCursor;
 
+import net.daverix.slingerorm.android.BuildConfig;
 import net.daverix.slingerorm.android.Mapper;
-import net.daverix.slingerorm.core.android.BuildConfig;
+import net.daverix.slingerorm.android.entities.CustomFieldEntity;
+import net.daverix.slingerorm.android.entities.ForeignEntity;
+import net.daverix.slingerorm.android.entities.ForeignEntityMapper;
 
 import org.junit.Before;
 import org.junit.Test;

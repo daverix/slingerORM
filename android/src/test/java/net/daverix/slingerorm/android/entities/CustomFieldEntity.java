@@ -14,38 +14,33 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.entities;
 
-import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.PrimaryKey;
-import net.daverix.slingerorm.annotation.Serializer;
-import net.daverix.slingerorm.serialization.DateSerializer;
-
-import java.util.Date;
 
 @DatabaseEntity
-public class SerializerEntity {
-    @Serializer(MyObjectSerializer.class) @PrimaryKey
-    private MyObject id;
+public class CustomFieldEntity {
+    @ColumnName("Id") @PrimaryKey
+    private String id;
 
-    @ColumnName("_created")
-    @Serializer(DateSerializer.class)
-    private Date created;
+    @ColumnName("Name")
+    private String name;
 
-    public MyObject getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(MyObject id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Date getCreated() {
-        return created;
+    public String getName() {
+        return name;
     }
 
-    public void setCreated(Date created) {
-        this.created = created;
+    public void setName(String name) {
+        this.name = name;
     }
 }

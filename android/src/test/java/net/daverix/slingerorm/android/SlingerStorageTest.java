@@ -22,6 +22,7 @@ import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.PrimaryKey;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -310,7 +311,7 @@ public class SlingerStorageTest {
 
     @DatabaseEntity
     private class MyUnknownDatabaseEntity {
-
+        @PrimaryKey String hello;
     }
 
     @Test
@@ -361,8 +362,8 @@ public class SlingerStorageTest {
     }
 
     @DatabaseEntity
-    private class TestEntity {
-        int id;
+    public static class TestEntity {
+        @PrimaryKey int id;
         String name;
 
         public TestEntity(int id, String name) {

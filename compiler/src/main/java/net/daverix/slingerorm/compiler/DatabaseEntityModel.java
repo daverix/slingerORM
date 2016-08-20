@@ -306,6 +306,7 @@ class DatabaseEntityModel {
     }
 
     private void findMapperClassName() {
+        if(databaseTypeElement.getEnclosingElement())
         mapperClassName = databaseTypeElement.getSimpleName() + "Mapper";
     }
 

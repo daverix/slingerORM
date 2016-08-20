@@ -1,4 +1,4 @@
-package net.daverix.slingerorm.android.model;
+package net.daverix.slingerorm.android.entities;
 
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
