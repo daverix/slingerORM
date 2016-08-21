@@ -42,7 +42,7 @@ import javax.tools.JavaFileObject;
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes("net.daverix.slingerorm.annotation.DatabaseEntity")
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class DatabaseEntityProcessor extends AbstractProcessor {
     private PackageProvider packageProvider;
 

@@ -34,7 +34,7 @@ import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacte
 
 @AutoService(Processor.class)
 @SupportedAnnotationTypes("net.daverix.slingerorm.internal.EntityMapper")
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
+@SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class EntityMapperProcessor extends AbstractProcessor {
     private Set<TypeElement> mappers;
 
