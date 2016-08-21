@@ -48,6 +48,7 @@ import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_BOOLEAN;
 import static net.daverix.slingerorm.compiler.ElementUtils.TYPE_DOUBLE;
@@ -66,9 +67,9 @@ import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacter;
 
 class DatabaseEntityModel {
-    public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DateSerializer";
+    private static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DateSerializer";
     private final TypeElement databaseTypeElement;
-    private final TypeElementConverter typeElementConverter;
+    private final Types typeElementConverter;
     private final Elements typeElementProvider;
     private final PackageProvider packageProvider;
 
@@ -101,7 +102,7 @@ class DatabaseEntityModel {
     private String itemSql;
 
     public DatabaseEntityModel(TypeElement databaseTypeElement,
-                               TypeElementConverter typeElementConverter,
+                               Types typeElementConverter,
                                Elements typeElementProvider,
                                PackageProvider packageProvider) {
         this.databaseTypeElement = databaseTypeElement;
@@ -168,7 +169,7 @@ class DatabaseEntityModel {
             if (typeMirror.getKind() != TypeKind.DECLARED)
                 continue;
 
-            TypeElement typeElement = typeElementConverter.asTypeElement(typeMirror);
+            TypeElement typeElement = (TypeElement) typeElementConverter.asElement(typeMirror);
             if (typeElement == null) {
                 throw new InvalidElementException("Cannot get type from field", element);
             }
@@ -354,7 +355,7 @@ class DatabaseEntityModel {
 
         Element enclosingElement = typeElement.getEnclosingElement();
         if(enclosingElement.getKind() == ElementKind.CLASS) {
-            TypeElement enclosingTypeElement = typeElementConverter.asTypeElement(enclosingElement.asType());
+            TypeElement enclosingTypeElement = (TypeElement) typeElementConverter.asElement(enclosingElement.asType());
             return getEntityClassName(enclosingTypeElement) + "." + typeElement.getSimpleName().toString();
         }
 
@@ -477,7 +478,7 @@ class DatabaseEntityModel {
             serializer.value();
             throw new IllegalStateException("should never reach this line (this is a hack)");
         } catch (MirroredTypeException mte) {
-            return typeElementConverter.asTypeElement(mte.getTypeMirror());
+            return (TypeElement) typeElementConverter.asElement(mte.getTypeMirror());
         }
     }
 

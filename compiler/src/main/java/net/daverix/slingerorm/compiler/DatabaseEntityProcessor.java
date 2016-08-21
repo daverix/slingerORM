@@ -45,14 +45,12 @@ import javax.tools.JavaFileObject;
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class DatabaseEntityProcessor extends AbstractProcessor {
     private PackageProvider packageProvider;
-    private TypeElementConverter typeElementConverter;
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
 
         packageProvider = new PackageProvider();
-        typeElementConverter = new TypeElementConverterImpl(processingEnv.getTypeUtils());
     }
 
     @Override
@@ -61,7 +59,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
             if(entity.getModifiers().contains(Modifier.ABSTRACT)) continue;
 
             try {
-                createMapper(packageProvider, typeElementConverter, (TypeElement) entity);
+                createMapper(packageProvider, (TypeElement) entity);
             } catch (IOException e) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: " + e.getLocalizedMessage());
             } catch (InvalidElementException e) {
@@ -73,10 +71,13 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         return true;
     }
 
-    private void createMapper(PackageProvider packageProvider, TypeElementConverter typeElementConverter, TypeElement entity) throws IOException, InvalidElementException {
+    private void createMapper(PackageProvider packageProvider, TypeElement entity) throws IOException, InvalidElementException {
         if(entity == null) throw new IllegalArgumentException("entity is null");
 
-        DatabaseEntityModel model = new DatabaseEntityModel(entity, typeElementConverter, processingEnv.getElementUtils(), packageProvider);
+        DatabaseEntityModel model = new DatabaseEntityModel(entity,
+                processingEnv.getTypeUtils(),
+                processingEnv.getElementUtils(),
+                packageProvider);
         model.initialize();
 
         String packageName = model.getMapperPackageName();
