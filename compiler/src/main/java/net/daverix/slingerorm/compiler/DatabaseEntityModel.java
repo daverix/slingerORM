@@ -18,8 +18,11 @@ package net.daverix.slingerorm.compiler;
 
 import net.daverix.slingerorm.annotation.ColumnName;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
+import net.daverix.slingerorm.annotation.ForeignKeyAction;
 import net.daverix.slingerorm.annotation.GetField;
 import net.daverix.slingerorm.annotation.NotDatabaseField;
+import net.daverix.slingerorm.annotation.OnDelete;
+import net.daverix.slingerorm.annotation.OnUpdate;
 import net.daverix.slingerorm.annotation.PrimaryKey;
 import net.daverix.slingerorm.annotation.Serializer;
 import net.daverix.slingerorm.annotation.SetField;
@@ -87,6 +90,9 @@ class DatabaseEntityModel {
     private final Set<String> serializerQualifiedNames = new HashSet<String>();
     private final Map<String, String> fieldSerializerNames = new HashMap<String, String>();
     private final Map<String, DatabaseEntityModel> subModels = new HashMap<String, DatabaseEntityModel>();
+    private final Map<String, ForeignKeyAction> foreignKeyOnUpdate = new HashMap<>();
+    private final Map<String, ForeignKeyAction> foreignKeyOnDelete = new HashMap<>();
+
     private String mapperPackageName;
     private String mapperClassName;
     private String databaseEntityClassName;
@@ -111,6 +117,7 @@ class DatabaseEntityModel {
         findTableName();
         findFieldsInUse();
         findPrimaryKeyFields();
+        findForeignKeyAnnotations();
         findSubModels();
         findColumnNames();
 
@@ -131,6 +138,22 @@ class DatabaseEntityModel {
         generateCreateTableSql();
         generateNamesForSerializers();
         generateItemSql();
+    }
+
+    private void findForeignKeyAnnotations() {
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
+
+            OnDelete onDelete = element.getAnnotation(OnDelete.class);
+            if(onDelete != null) {
+                foreignKeyOnDelete.put(field, onDelete.value());
+            }
+
+            OnUpdate onUpdate = element.getAnnotation(OnUpdate.class);
+            if(onUpdate != null) {
+                foreignKeyOnUpdate.put(field, onUpdate.value());
+            }
+        }
     }
 
     private void findSubModels() throws InvalidElementException {
@@ -653,24 +676,82 @@ class DatabaseEntityModel {
         }
     }
 
-    private void generateCreateTableSql() {
-        List<String> typeNamePairs = new ArrayList<String>();
+    private void generateCreateTableSql() throws InvalidElementException {
+        createTableSql = String.format("CREATE TABLE IF NOT EXISTS %s(%s, PRIMARY KEY(%s)%s)",
+                getTableName(),
+                createSqlFieldsText(),
+                createSqlPrimaryKeysText(),
+                createSqlForeignKeysText());
+    }
+
+    private String createSqlPrimaryKeysText() {
         List<String> primaryKeyColumns = new ArrayList<String>();
+        for (String field : fieldsInUse.keySet()) {
+            final String columnName = columnNames.get(field);
+            if (primaryKeyFields.contains(field)) {
+                primaryKeyColumns.add(columnName);
+            }
+        }
+        return String.join(", ", primaryKeyColumns);
+    }
+
+    private String createSqlFieldsText() {
+        List<String> typeNamePairs = new ArrayList<String>();
         for (String field : fieldsInUse.keySet()) {
             final String columnName = columnNames.get(field);
             final String fieldType = fieldDatabaseTypes.get(field).name();
 
             typeNamePairs.add(columnName + " " + fieldType);
+        }
+        return String.join(", ", typeNamePairs);
+    }
 
-            if (primaryKeyFields.contains(field)) {
-                primaryKeyColumns.add(columnName);
+    private String createSqlForeignKeysText() throws InvalidElementException {
+        StringBuilder foreignKeys = new StringBuilder();
+        for (String field : subModels.keySet()) {
+            final String columnName = columnNames.get(field);
+
+            //TODO: support multiple primary keys
+            DatabaseEntityModel databaseEntity = getDatabaseEntity(field);
+            List<String> primaryKeyFields = new ArrayList<>(databaseEntity.getPrimaryKeyFields());
+            if(primaryKeyFields.size() < 1)
+                throw new InvalidElementException("The field points to a database entity that doesn't have a primary key", fieldsInUse.get(field));
+
+            if(primaryKeyFields.size() > 1)
+                throw new InvalidElementException("The field points to a database entity which has more than one primary key which currently not supported.", fieldsInUse.get(field));
+
+            foreignKeys.append(", FOREIGN KEY(").append(columnName).append(") REFERENCES ")
+                    .append(databaseEntity.getTableName())
+                    .append("(").append(primaryKeyFields.get(0)).append(")");
+
+            ForeignKeyAction onUpdateAction = foreignKeyOnUpdate.get(field);
+            if(onUpdateAction != null) {
+                foreignKeys.append(" ON UPDATE ").append(getStringFromAction(onUpdateAction));
+            }
+
+            ForeignKeyAction onDeleteAction = foreignKeyOnDelete.get(field);
+            if(onDeleteAction != null) {
+                foreignKeys.append(" ON DELETE ").append(getStringFromAction(onDeleteAction));
             }
         }
+        return foreignKeys.toString();
+    }
 
-        createTableSql = String.format("CREATE TABLE IF NOT EXISTS %s(%s, PRIMARY KEY(%s))",
-                getTableName(),
-                String.join(", ", typeNamePairs),
-                String.join(", ", primaryKeyColumns));
+    private static String getStringFromAction(ForeignKeyAction action) {
+        switch (action) {
+            case NO_ACTION:
+                return "NO ACTION";
+            case RESTRICT:
+                return "RESTRICT";
+            case SET_NULL:
+                return "SET NULL";
+            case SET_DEFAULT:
+                return "SET DEFAULT";
+            case CASCADE:
+                return "CASCADE";
+            default:
+                return "INVALID";
+        }
     }
 
     private void generateNamesForSerializers() {
