@@ -365,7 +365,7 @@ class DatabaseEntityModel {
     private void findTableName() throws InvalidElementException {
         DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
         String tableName = annotation.name();
-        if (tableName == null || tableName.equals("")) {
+        if (tableName.equals("")) {
             this.tableName = databaseTypeElement.getSimpleName().toString();
         } else {
             this.tableName = tableName;
@@ -426,7 +426,7 @@ class DatabaseEntityModel {
         DatabaseEntity databaseEntity = databaseTypeElement.getAnnotation(DatabaseEntity.class);
         String[] fields = databaseEntity.primaryKeyFields();
 
-        if (fields == null || fields.length == 0)
+        if (fields.length == 0)
             return;
 
         for (String field : fields) {
@@ -453,7 +453,7 @@ class DatabaseEntityModel {
                 columnName = columnNameAnnotation.value();
             }
 
-            if (columnName == null || columnName.equals(""))
+            if (columnName.equals(""))
                 throw new InvalidElementException("columnName must not be null or empty!", element);
 
             columnNames.put(field, columnName);
