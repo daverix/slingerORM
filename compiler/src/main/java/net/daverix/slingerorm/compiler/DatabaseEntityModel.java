@@ -66,7 +66,7 @@ import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacter;
 
 class DatabaseEntityModel {
-    public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DefaultDateSerializer";
+    public static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DateSerializer";
     private final TypeElement databaseTypeElement;
     private final TypeElementConverter typeElementConverter;
     private final Elements typeElementProvider;
@@ -117,7 +117,8 @@ class DatabaseEntityModel {
         findTableName();
         findFieldsInUse();
         findPrimaryKeyFields();
-        findForeignKeyAnnotations();
+        findOnUpdateActions();
+        findOnDeleteActions();
         findSubModels();
         findColumnNames();
 
@@ -140,15 +141,19 @@ class DatabaseEntityModel {
         generateItemSql();
     }
 
-    private void findForeignKeyAnnotations() {
+    private void findOnDeleteActions() {
         for (String field : fieldsInUse.keySet()) {
             Element element = fieldsInUse.get(field);
-
             OnDelete onDelete = element.getAnnotation(OnDelete.class);
             if(onDelete != null) {
                 foreignKeyOnDelete.put(field, onDelete.value());
             }
+        }
+    }
 
+    private void findOnUpdateActions() {
+        for (String field : fieldsInUse.keySet()) {
+            Element element = fieldsInUse.get(field);
             OnUpdate onUpdate = element.getAnnotation(OnUpdate.class);
             if(onUpdate != null) {
                 foreignKeyOnUpdate.put(field, onUpdate.value());
@@ -534,7 +539,7 @@ class DatabaseEntityModel {
             }
 
             //TODO: add support for multiple keys by specifying them in an annotation?
-            String primaryKeyField = new ArrayList<String>(primaryKeyFields).get(0);
+            String primaryKeyField = new ArrayList<>(primaryKeyFields).get(0);
             databaseType = databaseEntityModel.getDatabaseTypeForField(primaryKeyField);
         } else {
             databaseType = getDatabaseType(fieldsInUse.get(field));
@@ -651,28 +656,33 @@ class DatabaseEntityModel {
                 }
             case DECLARED:
                 DeclaredType declaredType = (DeclaredType) fieldType;
-                TypeElement typeElement = (TypeElement) declaredType.asElement();
-                String typeName = typeElement.getQualifiedName().toString();
-
-                if (typeName.equals(TYPE_STRING)) {
-                    return CursorType.STRING;
-                } else if (typeName.equals(TYPE_LONG)) {
-                    return CursorType.LONG;
-                } else if (typeName.equals(TYPE_INTEGER)) {
-                    return CursorType.INT;
-                } else if (typeName.equals(TYPE_SHORT)) {
-                    return CursorType.SHORT;
-                } else if (typeName.equals(TYPE_DOUBLE)) {
-                    return CursorType.DOUBLE;
-                } else if (typeName.equals(TYPE_FLOAT)) {
-                    return CursorType.FLOAT;
-                } else if (typeName.equals(TYPE_BOOLEAN)) {
-                    return CursorType.BOOLEAN;
-                } else {
-                    throw new InvalidElementException(String.format("Type %s can't be provided by an android cursor, use a custom serializer to solve this", typeElement), element);
-                }
+                return getCursorType(element, declaredType);
             default:
                 throw new InvalidElementException("Type not known by SlingerORM, solve this by creating a custom serializer", element);
+        }
+    }
+
+    private CursorType getCursorType(Element element, DeclaredType declaredType) throws InvalidElementException {
+        TypeElement typeElement = (TypeElement) declaredType.asElement();
+        String typeName = typeElement.getQualifiedName().toString();
+
+        switch (typeName) {
+            case TYPE_STRING:
+                return CursorType.STRING;
+            case TYPE_LONG:
+                return CursorType.LONG;
+            case TYPE_INTEGER:
+                return CursorType.INT;
+            case TYPE_SHORT:
+                return CursorType.SHORT;
+            case TYPE_DOUBLE:
+                return CursorType.DOUBLE;
+            case TYPE_FLOAT:
+                return CursorType.FLOAT;
+            case TYPE_BOOLEAN:
+                return CursorType.BOOLEAN;
+            default:
+                throw new InvalidElementException(String.format("Type %s can't be provided by an android cursor, use a custom serializer to solve this", typeElement), element);
         }
     }
 
