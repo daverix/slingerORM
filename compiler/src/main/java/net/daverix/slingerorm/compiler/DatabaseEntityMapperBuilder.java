@@ -16,6 +16,8 @@
 
 package net.daverix.slingerorm.compiler;
 
+import net.daverix.slingerorm.compiler.mapping.Setter;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -90,7 +92,7 @@ public class DatabaseEntityMapperBuilder {
     }
 
     private void writeMethods(DatabaseEntityModel entityModel) throws IOException {
-        Set<String> fields = entityModel.getFieldNames();
+        String databaseEntityClassName = entityModel.getDatabaseEntityClassName();
 
         writer.write("    @Override\n");
         writer.write("    public String createTable() {\n");
@@ -111,27 +113,23 @@ public class DatabaseEntityMapperBuilder {
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public ContentValues mapValues(" + entityModel.getDatabaseEntityClassName() + " item) {\n");
+
+        writer.write("    public ContentValues mapValues(" + databaseEntityClassName + " item) {\n");
         writer.write("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writeln();
         writer.write("        ContentValues values = new ContentValues();\n");
-        for(String field : fields) {
-            String columnName = entityModel.getColumnName(field);
-            writeValuesForField(columnName, "item", entityModel, field);
+        for(ColumnModel columnModel : entityModel.getColumns().values()) {
+            writeValuesForColumn(columnModel, "item");
         }
         writer.write("        return values;\n");
         writer.write("    }\n");
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public " + entityModel.getDatabaseEntityClassName() + " mapItem(Cursor cursor) {\n");
+        writer.write("    public " + databaseEntityClassName + " mapItem(Cursor cursor) {\n");
         writer.write("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");\n");
         writeln();
-        writer.write("        " + entityModel.getDatabaseEntityClassName() + " item = new " + entityModel.getDatabaseEntityClassName() + "();\n");
-        for(String field : fields) {
-            String columnName = entityModel.getColumnName(field);
-            writeSetterForField(entityModel, "item", field, columnName);
-        }
+        writeFieldSetters(databaseEntityClassName, entityModel.getFields().values(), "item", "cursor");
         writer.write("        return item;\n");
         writer.write("    }\n");
         writeln();
@@ -143,140 +141,54 @@ public class DatabaseEntityMapperBuilder {
         writeln();
 
         writer.write("    @Override\n");
-        writer.write("    public String[] getItemQueryArguments(" + entityModel.getDatabaseEntityClassName() + " item) {\n");
+        writer.write("    public String[] getItemQueryArguments(" + databaseEntityClassName + " item) {\n");
         writer.write("        return new String[]{" + getItemSqlArgumentsText(entityModel) + "};\n");
         writer.write("    }\n");
         writeln();
     }
 
+    private void writeFieldSetters(String databaseEntityClassName, Collection<FieldModel> fields, String variable, String cursorName) throws IOException {
+        writer.write("        " + databaseEntityClassName + " " + variable + " = new " + databaseEntityClassName + "();\n");
+        for(FieldModel fieldModel : fields) {
+            if(fieldModel.isDatabaseEntity()) {
+                writeFieldSetters(fieldModel.getDatabaseEntityModel().getDatabaseEntityClassName(),
+                        fieldModel.getDatabaseEntityModel().getFields().values(),
+                        fieldModel.getName(),
+                        cursorName);
+            }
+            writeSetterForField(fieldModel.getSetter(), variable, cursorName);
+        }
+    }
+
     private String getItemSqlArgumentsText(DatabaseEntityModel entityModel) {
-        List<String> getters = new ArrayList<String>();
-        for(String field : entityModel.getItemSqlArgFields()) {
-            if(entityModel.isFieldString(field)) {
-                getters.add("item." + getEntityFieldMethod(entityModel, field));
+        List<String> getters = new ArrayList<>();
+        for(String column : entityModel.getItemSqlArgColumns()) {
+            String getter = entityModel.getColumns().get(column).getGetter().get("item");
+            if(entityModel.isFieldString(column)) {
+                getters.add(getter);
             }
             else {
-                getters.add("String.valueOf(item." + getEntityFieldMethod(entityModel, field) + ")");
+                getters.add(String.format("String.valueOf(item.%s)", getter));
             }
         }
         return String.join(", ", getters);
     }
 
-    private void writeValuesForField(String columnName, String prefix, DatabaseEntityModel entityModel, String field) throws IOException {
-        if (entityModel.isDatabaseEntity(field)) {
-            DatabaseEntityModel fieldModel = entityModel.getDatabaseEntity(field);
-            String primaryKey = new ArrayList<>(fieldModel.getPrimaryKeyFields()).get(0);
-            writeValues(columnName, getValuesForFieldValue(prefix + "." + getEntityFieldMethod(entityModel, field), fieldModel, primaryKey));
-            return;
-        }
-
-        writeValues(columnName, getValuesForFieldValue(prefix, entityModel, field));
-    }
-
-    private String getValuesForFieldValue(String prefix, DatabaseEntityModel entityModel, String field) {
-        if(entityModel.hasSerializer(field)) {
-            String serializerFieldName = entityModel.getSerializerFieldName(field);
-            return serializerFieldName + ".serialize(" + prefix + "." + getEntityFieldMethod(entityModel, field) + ")";
-        }
-        else {
-            return prefix + "." + getEntityFieldMethod(entityModel, field);
-        }
-    }
-
-    private String getEntityFieldMethod(DatabaseEntityModel entityModel, String field) {
-        FieldAccess fieldAccess = entityModel.getGetFieldAccess(field);
-        switch (fieldAccess) {
-            case ANNOTATED_METHOD:
-                return entityModel.getGetFieldAnnotatedMethod(field) + "()";
-            case STANDARD_METHOD:
-                return entityModel.getStandardGetMethod(field) + "()";
-            case FIELD:
-                return field;
-            default:
-                throw new IllegalStateException("unknown type!");
-        }
+    private void writeValuesForColumn(ColumnModel columnModel, String variable) throws IOException {
+        writeValues(columnModel.getName(), columnModel.getGetter().get(variable));
     }
 
     private void writeValues(String key, String value) throws IOException {
         writer.write("        values.put(\"" + key + "\", " + value + ");\n");
     }
 
-    private void writeSetterForField(DatabaseEntityModel entityModel, String variable, String field, String columnName) throws IOException {
-        if(entityModel.hasSerializer(field)) {
-            String serializerField = entityModel.getSerializerFieldName(field);
-            CursorType cursorType = entityModel.getCursorType(field);
-            writeMethod(variable, getSetter(entityModel, field, serializerField + ".deserialize(" + getCursorMethod(columnName, cursorType)) + ")");
-        }
-        else if(entityModel.isDatabaseEntity(field)) {
-            writeSetterForDatabaseEntityField(entityModel, variable, field, columnName);
-        }
-        else {
-            CursorType cursorType = entityModel.getCursorType(field);
-            writeMethod(variable, getSetter(entityModel, field, getCursorMethod(columnName, cursorType)));
-        }
-    }
-
-    private void writeSetterForDatabaseEntityField(DatabaseEntityModel entityModel, String variable, String field, String columnName) throws IOException {
-        DatabaseEntityModel fieldModel = entityModel.getDatabaseEntity(field);
-        writer.write("        " + fieldModel.getDatabaseEntityClassName() + " " + field + " = new " + fieldModel.getDatabaseEntityClassName() + "();\n");
-
-        Set<String> subFields = fieldModel.getFieldNames();
-        for(String subField : subFields) {
-            String subColumnName = fieldModel.getColumnName(subField);
-            writeSetterForField(fieldModel, field, subField, columnName + "_" + subColumnName);
-        }
-
-        writeMethod(variable, getSetter(entityModel, field, field));
-    }
-
-    private void writeMethod(String variable, String method) throws IOException {
-        writer.write("        " + variable + "." + method + ";\n");
-    }
-
-    private String getSetter(DatabaseEntityModel entityModel, String field, String cursorValue) {
-        FieldAccess fieldAccess = entityModel.getSetFieldAccess(field);
-        switch (fieldAccess) {
-            case ANNOTATED_METHOD:
-                return entityModel.getSetFieldAnnotatedMethod(field) + "(" + cursorValue + ")";
-            case STANDARD_METHOD:
-                return entityModel.getStandardSetMethod(field) + "(" + cursorValue + ")";
-            case FIELD:
-                return field + " = " + cursorValue;
-            default:
-                throw new IllegalStateException("unknown type!");
-        }
-    }
-
-    private String getCursorMethod(String columnName, CursorType cursorType) {
-        switch (cursorType) {
-            case BYTE_ARRAY:
-                return "cursor.getBlob(" + getColumnIndex(columnName) + ")";
-            case SHORT:
-                return "cursor.getShort(" + getColumnIndex(columnName) + ")";
-            case INT:
-                return "cursor.getInt(" + getColumnIndex(columnName) + ")";
-            case LONG:
-                return "cursor.getLong(" + getColumnIndex(columnName) + ")";
-            case FLOAT:
-                return "cursor.getFloat(" + getColumnIndex(columnName) + ")";
-            case DOUBLE:
-                return "cursor.getDouble(" + getColumnIndex(columnName) + ")";
-            case STRING:
-                return "cursor.getString(" + getColumnIndex(columnName) + ")";
-            case BOOLEAN:
-                return "cursor.getShort(" + getColumnIndex(columnName) + ") == 1";
-            default:
-                throw new IllegalStateException("unknown type");
-        }
-    }
-
-    private String getColumnIndex(String columnName) {
-        return "cursor.getColumnIndex(\"" + columnName + "\")";
+    private void writeSetterForField(Setter setter, String itemVariable, String cursorVariable) throws IOException {
+        writer.write("        " + setter.set(itemVariable, cursorVariable) + ";\n");
     }
 
     private List<String> getCitedColumnNames(DatabaseEntityModel entityModel) {
-        Collection<String> columnNames = entityModel.getColumnNames();
-        List<String> cited = new ArrayList<String>();
+        Collection<String> columnNames = entityModel.getColumns().keySet();
+        List<String> cited = new ArrayList<>();
         for(String columnName : columnNames) {
             cited.add("\"" + columnName + "\"");
         }
@@ -289,14 +201,14 @@ public class DatabaseEntityMapperBuilder {
     }
 
     private void writeImports(DatabaseEntityModel entityModel) throws IOException {
-        Set<String> qualifiedNames = new HashSet<String>();
+        Set<String> qualifiedNames = new HashSet<>();
         qualifiedNames.add("net.daverix.slingerorm.android.Mapper");
         qualifiedNames.add("net.daverix.slingerorm.internal.EntityMapper");
         qualifiedNames.add("android.content.ContentValues");
         qualifiedNames.add("android.database.Cursor");
         qualifiedNames.addAll(entityModel.getQualifiedNamesForSerializers());
 
-        List<String> sortedNames = new ArrayList<String>(qualifiedNames);
+        List<String> sortedNames = new ArrayList<>(qualifiedNames);
         Collections.sort(sortedNames);
         for(String qualifiedName : sortedNames) {
             writeImport(qualifiedName);

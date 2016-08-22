@@ -23,9 +23,16 @@ import net.daverix.slingerorm.annotation.GetField;
 import net.daverix.slingerorm.annotation.NotDatabaseField;
 import net.daverix.slingerorm.annotation.OnDelete;
 import net.daverix.slingerorm.annotation.OnUpdate;
-import net.daverix.slingerorm.annotation.PrimaryKey;
 import net.daverix.slingerorm.annotation.Serializer;
 import net.daverix.slingerorm.annotation.SetField;
+import net.daverix.slingerorm.compiler.mapping.Getter;
+import net.daverix.slingerorm.compiler.mapping.cursor.DefaultCursorGetter;
+import net.daverix.slingerorm.compiler.mapping.cursor.DeserializeGetter;
+import net.daverix.slingerorm.compiler.mapping.cursor.FieldSetter;
+import net.daverix.slingerorm.compiler.mapping.cursor.MethodSetter;
+import net.daverix.slingerorm.compiler.mapping.values.FieldValueGetter;
+import net.daverix.slingerorm.compiler.mapping.values.MethodValueGetter;
+import net.daverix.slingerorm.compiler.mapping.values.SerializeGetter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,34 +72,34 @@ import static net.daverix.slingerorm.compiler.ElementUtils.isDate;
 import static net.daverix.slingerorm.compiler.ElementUtils.isString;
 import static net.daverix.slingerorm.compiler.ListUtils.filter;
 import static net.daverix.slingerorm.compiler.StringUtils.lowerCaseFirstCharacter;
+import static net.daverix.slingerorm.compiler.TypeUtils.isTypeMirrorEqual;
 
 class DatabaseEntityModel {
     private static final String DEFAULT_DATE_SERIALIZER = "net.daverix.slingerorm.serialization.DateSerializer";
+
     private final TypeElement databaseTypeElement;
     private final Types typeElementConverter;
     private final Elements typeElementProvider;
     private final PackageProvider packageProvider;
 
-    private final Map<String, Element> fieldsInUse = new HashMap<String, Element>();
-    private final Map<String, TypeElement> fieldSerializer = new HashMap<String, TypeElement>();
-    private final Map<String, Integer> fieldNameOccurrences = new HashMap<String, Integer>();
-    private final Map<String, String> getMethods = new HashMap<String, String>();
-    private final Map<String, String> annotatedGetMethods = new HashMap<String, String>();
-    private final Map<String, String> setMethods = new HashMap<String, String>();
-    private final Map<String, String> annotatedSetMethods = new HashMap<String, String>();
-    private final List<String> itemSqlArgFields = new ArrayList<String>();
-    private final Set<String> primaryKeyFields = new HashSet<String>();
-    private final Map<String, FieldAccess> fieldGetAccess = new HashMap<String, FieldAccess>();
-    private final Map<String, FieldAccess> fieldSetAccess = new HashMap<String, FieldAccess>();
-    private final Map<String, String> serializerFieldClassNames = new HashMap<String, String>();
-    private final Map<String, ColumnDataType> fieldDatabaseTypes = new HashMap<String, ColumnDataType>();
-    private final Map<String, CursorType> cursorTypes = new HashMap<String, CursorType>();
-    private final Map<String, String> columnNames = new HashMap<String, String>();
-    private final Set<String> serializerQualifiedNames = new HashSet<String>();
-    private final Map<String, String> fieldSerializerNames = new HashMap<String, String>();
-    private final Map<String, DatabaseEntityModel> subModels = new HashMap<String, DatabaseEntityModel>();
-    private final Map<String, ForeignKeyAction> foreignKeyOnUpdate = new HashMap<>();
-    private final Map<String, ForeignKeyAction> foreignKeyOnDelete = new HashMap<>();
+    // field name - field model
+    private final Map<String, FieldModel> fieldModels = new HashMap<>();
+    private final Map<String, CursorType> cursorTypes = new HashMap<>();
+    private final Map<String, String> columnNames = new HashMap<>();
+
+    // field type - model for database entity
+    private final Map<TypeElement, DatabaseEntityModel> databaseEntityModels = new HashMap<>();
+
+    // column name - column model
+    private final Map<String, ColumnModel> columns = new HashMap<>();
+
+    private final List<String> itemSqlArgColumns = new ArrayList<>();
+    private final Set<String> primaryKeyFields = new HashSet<>();
+
+    private final Map<String, TypeElement> fieldSerializers = new HashMap<>();
+    private final Map<String, String> serializerFieldClassNames = new HashMap<>();
+    private final Set<String> serializerQualifiedNames = new HashSet<>();
+    private final Map<String, String> fieldSerializerNames = new HashMap<>();
 
     private String mapperPackageName;
     private String mapperClassName;
@@ -100,6 +107,7 @@ class DatabaseEntityModel {
     private String tableName;
     private String createTableSql;
     private String itemSql;
+
 
     public DatabaseEntityModel(TypeElement databaseTypeElement,
                                Types typeElementConverter,
@@ -116,14 +124,14 @@ class DatabaseEntityModel {
         findMapperClassName();
         findEntityClassName();
         findTableName();
+
         findFieldsInUse();
         findPrimaryKeyFields();
         findOnUpdateActions();
         findOnDeleteActions();
-        findSubModels();
-        findColumnNames();
+        findFieldsThatAreDatabaseEntities();
 
-        initializeSubModels();
+        initializeSubDatabaseEntityModels();
 
         findGetFieldMethods();
         findGetMethods();
@@ -135,56 +143,67 @@ class DatabaseEntityModel {
         findSerializers();
         verifySerializersMatchFields();
 
-        findDatabaseTypesForFields();
-        findCursorTypesForFields();
+        generateColumns();
+        generateFieldSetters();
+
         generateCreateTableSql();
         generateNamesForSerializers();
         generateItemSql();
     }
 
     private void findOnDeleteActions() {
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
+        for (FieldModel model : fieldModels.values()) {
+            Element element = model.getElement();
             OnDelete onDelete = element.getAnnotation(OnDelete.class);
             if(onDelete != null) {
-                foreignKeyOnDelete.put(field, onDelete.value());
+                model.setForeignKeyDeleteAction(onDelete.value());
             }
         }
     }
 
     private void findOnUpdateActions() {
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
+        for (FieldModel model : fieldModels.values()) {
+            Element element = model.getElement();
             OnUpdate onUpdate = element.getAnnotation(OnUpdate.class);
             if(onUpdate != null) {
-                foreignKeyOnUpdate.put(field, onUpdate.value());
+                model.setForeignKeyUpdateAction(onUpdate.value());
             }
         }
     }
 
-    private void findSubModels() throws InvalidElementException {
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
+    private void findFieldsThatAreDatabaseEntities() throws InvalidElementException {
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
+
+            Element element = fieldModel.getElement();
             TypeMirror typeMirror = element.asType();
             if (typeMirror.getKind() != TypeKind.DECLARED)
-                continue;
+                return;
 
             TypeElement typeElement = (TypeElement) typeElementConverter.asElement(typeMirror);
             if (typeElement == null) {
                 throw new InvalidElementException("Cannot get type from field", element);
             }
             if (typeElement.getAnnotation(DatabaseEntity.class) != null) {
-                subModels.put(field, new DatabaseEntityModel(typeElement,
-                        typeElementConverter,
-                        typeElementProvider,
-                        packageProvider));
+                DatabaseEntityModel databaseEntityModel = databaseEntityModels.get(typeElement);
+                if(databaseEntityModel == null) {
+                    databaseEntityModel = new DatabaseEntityModel(typeElement,
+                            typeElementConverter,
+                            typeElementProvider,
+                            packageProvider);
+                    databaseEntityModels.put(typeElement, databaseEntityModel);
+                }
+
+                fieldModel.setDatabaseEntityModel(databaseEntityModel);
             }
         }
     }
 
-    private void initializeSubModels() throws InvalidElementException {
-        for (DatabaseEntityModel model : subModels.values()) {
-            model.initialize();
+    private void initializeSubDatabaseEntityModels() throws InvalidElementException {
+        for (DatabaseEntityModel databaseEntityModel : databaseEntityModels.values()) {
+            if(databaseEntityModel != null) {
+                databaseEntityModel.initialize();
+            }
         }
     }
 
@@ -195,8 +214,8 @@ class DatabaseEntityModel {
             SetField setField = method.getAnnotation(SetField.class);
             if (setField != null) {
                 String fieldName = setField.value();
-                Element fieldElement = fieldsInUse.get(fieldName);
-                if (fieldElement == null) {
+                FieldModel fieldModel = fieldModels.get(fieldName);
+                if (fieldModel == null) {
                     throw new InvalidElementException("@SetField does not point to a valid field", method);
                 }
 
@@ -205,11 +224,11 @@ class DatabaseEntityModel {
                     throw new InvalidElementException("@SetField method must have exactly one parameter", method);
                 }
                 VariableElement parameterElement = methodParameters.get(0);
-                if (!fieldElement.asType().equals(parameterElement.asType())) {
+                if (!fieldModel.getElement().asType().equals(parameterElement.asType())) {
                     throw new InvalidElementException("@SetField method parameter doesn't have the same type as the field it points to", method);
                 }
 
-                annotatedSetMethods.put(fieldName, method.getSimpleName().toString());
+                fieldModel.setAnnotatedSetterMethod(method.getSimpleName().toString());
             }
         }
     }
@@ -223,8 +242,8 @@ class DatabaseEntityModel {
             String simpleName = method.getSimpleName().toString();
             if (simpleName.length() > 3 && "set".equals(simpleName.substring(0, 3))) {
                 String fieldName = simpleName.substring(3, 4).toLowerCase() + simpleName.substring(4);
-                Element fieldElement = fieldsInUse.get(fieldName);
-                if (fieldElement == null) {
+                FieldModel fieldModel = fieldModels.get(fieldName);
+                if (fieldModel == null) {
                     continue;
                 }
 
@@ -234,25 +253,25 @@ class DatabaseEntityModel {
                 }
 
                 VariableElement parameterElement = methodParameters.get(0);
-                if (!fieldElement.asType().equals(parameterElement.asType())) {
+                if (!fieldModel.getElement().asType().equals(parameterElement.asType())) {
                     throw new InvalidElementException("set method parameter doesn't have the same type as the field it points to", method);
                 }
 
-                setMethods.put(fieldName, method.getSimpleName().toString());
+                fieldModel.setSetterMethod(method.getSimpleName().toString());
             }
         }
     }
 
     private void findSetFieldAccess() throws InvalidElementException {
-        for (String field : fieldsInUse.keySet()) {
-            if (annotatedSetMethods.containsKey(field)) {
-                fieldSetAccess.put(field, FieldAccess.ANNOTATED_METHOD);
-            } else if (setMethods.containsKey(field)) {
-                fieldSetAccess.put(field, FieldAccess.STANDARD_METHOD);
-            } else if (isAccessible(fieldsInUse.get(field))) {
-                fieldSetAccess.put(field, FieldAccess.FIELD);
+        for (FieldModel fieldModel : fieldModels.values()) {
+            if (fieldModel.getAnnotatedSetterMethod() != null) {
+                fieldModel.setSetterFieldAccess(FieldAccess.ANNOTATED_METHOD);
+            } else if (fieldModel.getSetterMethod() != null) {
+                fieldModel.setSetterFieldAccess(FieldAccess.STANDARD_METHOD);
+            } else if (isAccessible(fieldModel.getElement())) {
+                fieldModel.setSetterFieldAccess(FieldAccess.FIELD);
             } else {
-                throw new InvalidElementException("No way to access field in class, consider adding a set method or make the field public. The set method might need a @SetField annotation", fieldsInUse.get(field));
+                throw new InvalidElementException("No way to access field in class, consider adding a set method or make the field public. The set method might need a @SetField annotation", fieldModel.getElement());
             }
         }
     }
@@ -266,24 +285,24 @@ class DatabaseEntityModel {
             String simpleName = method.getSimpleName().toString();
             if (simpleName.length() > 3 && "get".equals(simpleName.substring(0, 3))) {
                 String fieldName = simpleName.substring(3, 4).toLowerCase() + simpleName.substring(4);
-                Element fieldElement = fieldsInUse.get(fieldName);
-                if (fieldElement == null) {
+                FieldModel fieldModel = fieldModels.get(fieldName);
+                if (fieldModel == null) {
                     continue;
                 }
 
-                if (!fieldElement.asType().equals(method.getReturnType())) {
+                if (!fieldModel.getElement().asType().equals(method.getReturnType())) {
                     throw new InvalidElementException("get method does not return the same type as the field it points to", method);
                 }
 
-                getMethods.put(fieldName, method.getSimpleName().toString());
+                fieldModel.setGetterMethod(method.getSimpleName().toString());
             } else if (simpleName.length() > 2 && "is".equals(simpleName.substring(0, 2))) {
                 String fieldName = simpleName.substring(2, 3).toLowerCase() + simpleName.substring(3);
-                Element fieldElement = fieldsInUse.get(fieldName);
-                if (fieldElement == null) {
+                FieldModel fieldModel = fieldModels.get(fieldName);
+                if (fieldModel == null) {
                     continue;
                 }
 
-                if (fieldElement.asType().getKind() != TypeKind.BOOLEAN) {
+                if (fieldModel.getElement().asType().getKind() != TypeKind.BOOLEAN) {
                     throw new InvalidElementException("is method must return boolean", method);
                 }
 
@@ -291,11 +310,10 @@ class DatabaseEntityModel {
                     throw new InvalidElementException("is method must point to a boolean field", method);
                 }
 
-                getMethods.put(fieldName, method.getSimpleName().toString());
+                fieldModel.setGetterMethod(method.getSimpleName().toString());
             }
         }
     }
-
 
     private void findGetFieldMethods() throws InvalidElementException {
         List<ExecutableElement> methods = getMethodsInTypeElement(databaseTypeElement);
@@ -304,32 +322,70 @@ class DatabaseEntityModel {
             GetField getField = method.getAnnotation(GetField.class);
             if (getField != null) {
                 String fieldName = getField.value();
-                Element fieldElement = fieldsInUse.get(fieldName);
-                if (fieldElement == null) {
+                FieldModel fieldModel = fieldModels.get(fieldName);
+                if (fieldModel == null) {
                     throw new InvalidElementException("GetField does not point to a valid field", method);
                 }
 
-                if (!fieldElement.asType().equals(method.getReturnType())) {
+                if (!fieldModel.getElement().asType().equals(method.getReturnType())) {
                     throw new InvalidElementException("GetField method does not return the same type as the field it points to", method);
                 }
 
-                annotatedGetMethods.put(fieldName, method.getSimpleName().toString());
+                fieldModel.setAnnotatedGetterMethod(method.getSimpleName().toString());
             }
         }
     }
 
     private void findGetFieldAccess() throws InvalidElementException {
-        for (String field : fieldsInUse.keySet()) {
-            if (annotatedGetMethods.containsKey(field)) {
-                fieldGetAccess.put(field, FieldAccess.ANNOTATED_METHOD);
-            } else if (getMethods.containsKey(field)) {
-                fieldGetAccess.put(field, FieldAccess.STANDARD_METHOD);
-            } else if (isAccessible(fieldsInUse.get(field))) {
-                fieldGetAccess.put(field, FieldAccess.FIELD);
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
+            if (fieldModel.getAnnotatedGetterMethod() != null) {
+                fieldModel.setGetterFieldAccess(FieldAccess.ANNOTATED_METHOD);
+            } else if (fieldModel.getGetterMethod() != null) {
+                fieldModel.setGetterFieldAccess(FieldAccess.STANDARD_METHOD);
+            } else if (isAccessible(fieldModel.getElement())) {
+                fieldModel.setGetterFieldAccess(FieldAccess.FIELD);
             } else {
-                throw new InvalidElementException("No way to access field in class, consider adding a get method or make the field public. The get method might need a @GetField annotation", fieldsInUse.get(field));
+                throw new InvalidElementException("No way to access field in class, consider adding a get method or make the field public. The get method might need a @GetField annotation", fieldModel.getElement());
             }
         }
+    }
+
+    private void generateFieldSetters() throws InvalidElementException {
+        for (FieldModel fieldModel : fieldModels.values()) {
+            createFieldSetter(fieldModel);
+        }
+    }
+
+    private void createFieldSetter(FieldModel fieldModel) throws InvalidElementException {
+        switch (fieldModel.getGetterFieldAccess()) {
+            case FIELD:
+                fieldModel.setSetter(new FieldSetter(fieldModel.getName(), getGetterForFieldModel(fieldModel)));
+                break;
+            case STANDARD_METHOD:
+                fieldModel.setSetter(new MethodSetter(fieldModel.getSetterMethod(), getGetterForFieldModel(fieldModel)));
+                break;
+            case ANNOTATED_METHOD:
+                fieldModel.setSetter(new MethodSetter(fieldModel.getAnnotatedSetterMethod(), getGetterForFieldModel(fieldModel)));
+                break;
+            default:
+                throw new InvalidElementException("Could not get access of field", fieldModel.getElement());
+        }
+    }
+
+    private Getter getGetterForFieldModel(FieldModel fieldModel) {
+        if(fieldModel.getSerializer() != null) {
+            String serializerName = fieldSerializerNames.get(fieldModel.getName());
+
+            return new DeserializeGetter(serializerName, createCursorGetter(fieldModel));
+        }
+
+        return createCursorGetter(fieldModel);
+    }
+
+    private DefaultCursorGetter createCursorGetter(FieldModel fieldModel) {
+        return new DefaultCursorGetter(cursorTypes.get(fieldModel.getName()),
+                columnNames.get(fieldModel.getName()));
     }
 
     private void findMapperPackageName() {
@@ -381,10 +437,12 @@ class DatabaseEntityModel {
         });
 
         if (fields.size() == 0)
-            throw new InvalidElementException("Database Entity must have fields in order to be stored", databaseTypeElement);
+            throw new InvalidElementException("Database Entity must have fieldModels in order to be stored", databaseTypeElement);
 
         for (Element field : fields) {
-            fieldsInUse.put(field.getSimpleName().toString(), field);
+            this.fieldModels.put(field.getSimpleName().toString(),
+                    new FieldModel(field
+                    ));
         }
     }
 
@@ -410,15 +468,17 @@ class DatabaseEntityModel {
 
         if (primaryKeyFields.size() > 0) return;
 
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
-            if (element.getAnnotation(PrimaryKey.class) != null) {
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
+            fieldModel.checkIsPrimaryKey();
+
+            if (fieldModel.isPrimaryKey()) {
                 primaryKeyFields.add(field);
             }
         }
 
         if (primaryKeyFields.size() == 0) {
-            throw new InvalidElementException("No primary keys found in entity! Annotate fields with @PrimaryKey or set the primary keys in the annotation", databaseTypeElement);
+            throw new InvalidElementException("No primary keys found in entity! Annotate fieldModels with @PrimaryKey or set the primary keys in the annotation", databaseTypeElement);
         }
     }
 
@@ -433,7 +493,7 @@ class DatabaseEntityModel {
             if (field == null || field.equals(""))
                 continue;
 
-            if (!fieldsInUse.containsKey(field)) {
+            if (!fieldModels.containsKey(field)) {
                 throw new InvalidElementException(String.format("Field \"%s\"specified in DatabaseEntity as a primary key can't be found in the class or it's super class", field), databaseTypeElement);
             }
 
@@ -441,34 +501,20 @@ class DatabaseEntityModel {
         }
     }
 
-    private void findColumnNames() throws InvalidElementException {
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
-
-            ColumnName columnNameAnnotation = element.getAnnotation(ColumnName.class);
-            String columnName;
-            if (columnNameAnnotation == null) {
-                columnName = element.getSimpleName().toString();
-            } else {
-                columnName = columnNameAnnotation.value();
-            }
-
-            if (columnName.equals(""))
-                throw new InvalidElementException("columnName must not be null or empty!", element);
-
-            columnNames.put(field, columnName);
-        }
-    }
-
     private void findSerializers() {
-        for (String field : fieldsInUse.keySet()) {
-            Element element = fieldsInUse.get(field);
-            if (element.getAnnotation(Serializer.class) != null) {
-                fieldSerializer.put(field, getSerializerTypeElement(element));
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
 
+            Element element = fieldModel.getElement();
+            TypeElement serializer = null;
+            if (element.getAnnotation(Serializer.class) != null) {
+                serializer = getSerializerTypeElement(element);
             } else if (isDate(element)) {
-                fieldSerializer.put(field, getDefaultDateSerializer());
+                serializer = getDefaultDateSerializer();
             }
+
+            fieldModel.setSerializer(serializer);
+            fieldSerializers.put(field, serializer);
         }
     }
 
@@ -487,63 +533,33 @@ class DatabaseEntityModel {
     }
 
     private void verifySerializersMatchFields() throws InvalidElementException {
-        for (String field : fieldsInUse.keySet()) {
-            TypeElement serializerType = fieldSerializer.get(field);
-            if (serializerType == null) continue;
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
 
-            ExecutableElement deserializeMethod = findMethodWithName("deserialize", serializerType);
+            TypeElement serializer = fieldModel.getSerializer();
+            if (serializer == null) return;
+
+            ExecutableElement deserializeMethod = findMethodWithName("deserialize", serializer);
             if (deserializeMethod == null)
                 throw new IllegalStateException("deserialize method not found, how?");
 
-            Element fieldElement = fieldsInUse.get(field);
-            if (!isTypeMirrorEqual(fieldElement.asType(), deserializeMethod.getReturnType()))
-                throw new InvalidElementException(String.format("Serializer doesn't match the type of the field. Expected %s but got %s", fieldElement.asType(), deserializeMethod.getReturnType()), fieldElement);
-        }
-    }
-
-    private boolean isTypeMirrorEqual(TypeMirror typeMirror, TypeMirror other) {
-        if (typeMirror == other) return true;
-
-        if (typeMirror.equals(other)) return true;
-
-        if (typeMirror.getKind() == typeMirror.getKind() && typeMirror.getKind().isPrimitive())
-            return true;
-
-        if (typeMirror.getKind() == typeMirror.getKind() && typeMirror.getKind() == TypeKind.DECLARED) {
-            TypeElement typeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
-            TypeElement otherTypeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
-
-            return typeElement.equals(otherTypeElement);
-        }
-
-        return false;
-    }
-
-    private void findDatabaseTypesForFields() throws InvalidElementException {
-        for (String field : columnNames.keySet()) {
-            ColumnDataType databaseType = getDatabaseTypeForField(field);
-
-            fieldDatabaseTypes.put(field, databaseType);
+            Element element = fieldModel.getElement();
+            if (!isTypeMirrorEqual(element.asType(), deserializeMethod.getReturnType()))
+                throw new InvalidElementException(String.format("Serializer doesn't match the type of the field. Expected %s but got %s", element.asType(), deserializeMethod.getReturnType()), element);
         }
     }
 
     public ColumnDataType getDatabaseTypeForField(String field) throws InvalidElementException {
-        TypeElement serializer = fieldSerializer.get(field);
+        FieldModel fieldModel = fieldModels.get(field);
+        if(fieldModel == null)
+            throw new IllegalArgumentException("database type could not be found for field " + field);
+
+        TypeElement serializer = fieldModel.getSerializer();
         ColumnDataType databaseType;
         if (serializer != null) {
             databaseType = getDatabaseType(getSerializerDatabaseValueParameter(serializer));
-        } else if (subModels.containsKey(field)) {
-            DatabaseEntityModel databaseEntityModel = subModels.get(field);
-            Set<String> primaryKeyFields = databaseEntityModel.getPrimaryKeyFields();
-            if (primaryKeyFields.size() != 1) {
-                throw new InvalidElementException("Only one primary key is supported when adding DatabaseEntity types", fieldsInUse.get(field));
-            }
-
-            //TODO: add support for multiple keys by specifying them in an annotation?
-            String primaryKeyField = new ArrayList<>(primaryKeyFields).get(0);
-            databaseType = databaseEntityModel.getDatabaseTypeForField(primaryKeyField);
         } else {
-            databaseType = getDatabaseType(fieldsInUse.get(field));
+            databaseType = getDatabaseType(fieldModels.get(field).getElement());
         }
         return databaseType;
     }
@@ -600,31 +616,119 @@ class DatabaseEntityModel {
         }
     }
 
-    private void findCursorTypesForFields() throws InvalidElementException {
-        for (String field : columnNames.keySet()) {
-            CursorType cursorType = getCursorTypeForField(field);
+    private void generateColumns() throws InvalidElementException {
+        generateNonDatabaseColumns();
+        generateDatabaseEntityColumns();
+    }
 
+    private void generateNonDatabaseColumns() throws InvalidElementException {
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
+            if(fieldModel.isDatabaseEntity()) {
+                continue;
+            }
+
+            CursorType cursorType = getCursorTypeForField(field);
             cursorTypes.put(field, cursorType);
+
+            String columnName = findColumnName(fieldModel.getElement());
+            columnNames.put(field, columnName);
+
+            ColumnDataType dataType = getDatabaseTypeForField(field);
+            boolean primaryKey = primaryKeyFields.contains(field);
+
+            Getter getter = createColumnGetter(fieldModel);
+
+            columns.put(columnName, new ColumnModel(columnName, dataType, primaryKey, getter));
         }
     }
 
-    public CursorType getCursorTypeForField(String field) throws InvalidElementException {
-        TypeElement serializer = fieldSerializer.get(field);
+    private Getter createColumnGetter(FieldModel fieldModel) {
+        String fieldName = fieldModel.getName();
+        TypeElement serializer = fieldSerializers.get(fieldName);
+        if(serializer != null) {
+            return new SerializeGetter(fieldSerializerNames.get(fieldName),
+                    createValuesGetterForFieldModel(fieldModel));
+        }
+
+        return createValuesGetterForFieldModel(fieldModel);
+    }
+
+    private Getter createValuesGetterForFieldModel(FieldModel fieldModel) {
+        switch (fieldModel.getGetterFieldAccess()) {
+            case FIELD:
+                return new FieldValueGetter(fieldModel.getName());
+            case STANDARD_METHOD:
+                return new MethodValueGetter(fieldModel.getGetterMethod());
+            case ANNOTATED_METHOD:
+                return new MethodValueGetter(fieldModel.getAnnotatedGetterMethod());
+            default:
+                return null;
+        }
+    }
+
+    private void generateDatabaseEntityColumns() throws InvalidElementException {
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
+            generateColumnsFromPrimaryKeys(fieldModel);
+        }
+    }
+
+    private void generateColumnsFromPrimaryKeys(FieldModel fieldModel) throws InvalidElementException {
+        DatabaseEntityModel databaseEntityModel = fieldModel.getDatabaseEntityModel();
+        if (databaseEntityModel == null)
+            return;
+
+        String firstPartOfColumnName = findColumnName(fieldModel.getElement());
+        Set<String> dbEntityPrimaryKeys = databaseEntityModel.getPrimaryKeyFields();
+        for (String dbEntityPrimaryKey : dbEntityPrimaryKeys) {
+            String columnName = createColumnNameForSubEntity(firstPartOfColumnName, dbEntityPrimaryKey);
+            if (columns.containsKey(columnName)) {
+                throw new InvalidElementException("Could not use " + columnName + " for database entity as there is already a column with that name defined in the current class.", fieldModel.getElement());
+            }
+
+            ColumnModel primaryKeyModel = databaseEntityModel.getColumns().get(dbEntityPrimaryKey);
+            if(primaryKeyModel == null)
+                throw new IllegalStateException("could not find column model for primary key " + dbEntityPrimaryKey);
+
+            columns.put(columnName, new ColumnModel(
+                    columnName,
+                    primaryKeyModel.getDataType(),
+                    false,
+                    createColumnGetter(fieldModel)));
+        }
+    }
+
+    private String findColumnName(Element element) throws InvalidElementException {
+        ColumnName columnNameAnnotation = element.getAnnotation(ColumnName.class);
+        String columnName;
+        if (columnNameAnnotation == null) {
+            columnName = element.getSimpleName().toString();
+        } else {
+            columnName = columnNameAnnotation.value();
+        }
+
+        if (columnName.equals(""))
+            throw new InvalidElementException("columnName must not be null or empty!", element);
+
+        return columnName;
+    }
+
+    private String createColumnNameForSubEntity(String firstPart, String subEntityPrimaryKey) {
+        return firstPart + "_" + subEntityPrimaryKey;
+    }
+
+    private CursorType getCursorTypeForField(String field) throws InvalidElementException {
+        FieldModel fieldModel = fieldModels.get(field);
+        if(fieldModel == null)
+            throw new IllegalArgumentException("cursor type could not be found for field " + field);
+
+        TypeElement serializer = fieldModel.getSerializer();
         CursorType cursorType;
         if (serializer != null) {
             cursorType = getCursorType(getSerializerDatabaseValueParameter(serializer));
-        } else if (subModels.containsKey(field)) {
-            DatabaseEntityModel databaseEntityModel = subModels.get(field);
-            Set<String> primaryKeyFields = databaseEntityModel.getPrimaryKeyFields();
-            if (primaryKeyFields.size() != 1) {
-                throw new InvalidElementException("Only one primary key is supported when adding DatabaseEntity types", fieldsInUse.get(field));
-            }
-
-            //TODO: add support for multiple keys by specifying them in an annotation?
-            String primaryKeyField = new ArrayList<String>(primaryKeyFields).get(0);
-            cursorType = databaseEntityModel.getCursorTypeForField(primaryKeyField);
         } else {
-            cursorType = getCursorType(fieldsInUse.get(field));
+            cursorType = getCursorType(fieldModels.get(field).getElement());
         }
         return cursorType;
     }
@@ -696,10 +800,10 @@ class DatabaseEntityModel {
     }
 
     private String createSqlPrimaryKeysText() {
-        List<String> primaryKeyColumns = new ArrayList<String>();
-        for (String field : fieldsInUse.keySet()) {
-            final String columnName = columnNames.get(field);
-            if (primaryKeyFields.contains(field)) {
+        List<String> primaryKeyColumns = new ArrayList<>();
+        for (String columnName : columns.keySet()) {
+            final ColumnModel column = columns.get(columnName);
+            if (column.isPrimaryKey()) {
                 primaryKeyColumns.add(columnName);
             }
         }
@@ -707,10 +811,10 @@ class DatabaseEntityModel {
     }
 
     private String createSqlFieldsText() {
-        List<String> typeNamePairs = new ArrayList<String>();
-        for (String field : fieldsInUse.keySet()) {
-            final String columnName = columnNames.get(field);
-            final String fieldType = fieldDatabaseTypes.get(field).name();
+        List<String> typeNamePairs = new ArrayList<>();
+        for (String columnName : columns.keySet()) {
+            ColumnModel model = columns.get(columnName);
+            final String fieldType = model.getDataType().name();
 
             typeNamePairs.add(columnName + " " + fieldType);
         }
@@ -719,28 +823,30 @@ class DatabaseEntityModel {
 
     private String createSqlForeignKeysText() throws InvalidElementException {
         StringBuilder foreignKeys = new StringBuilder();
-        for (String field : subModels.keySet()) {
-            final String columnName = columnNames.get(field);
+        for (String field : fieldModels.keySet()) {
+            FieldModel fieldModel = fieldModels.get(field);
 
-            //TODO: support multiple primary keys
-            DatabaseEntityModel databaseEntity = getDatabaseEntity(field);
-            List<String> primaryKeyFields = new ArrayList<>(databaseEntity.getPrimaryKeyFields());
-            if(primaryKeyFields.size() < 1)
-                throw new InvalidElementException("The field points to a database entity that doesn't have a primary key", fieldsInUse.get(field));
+            DatabaseEntityModel databaseEntity = fieldModel.getDatabaseEntityModel();
+            if(databaseEntity == null)
+                continue;
 
-            if(primaryKeyFields.size() > 1)
-                throw new InvalidElementException("The field points to a database entity which has more than one primary key which currently not supported.", fieldsInUse.get(field));
+            List<String> primaryKeyFields = new ArrayList<>();
+            for(String dbEntityKey : databaseEntity.getPrimaryKeyFields()) {
+                primaryKeyFields.add(createColumnNameForSubEntity(field, dbEntityKey));
+            }
 
-            foreignKeys.append(", FOREIGN KEY(").append(columnName).append(") REFERENCES ")
-                    .append(databaseEntity.getTableName())
-                    .append("(").append(primaryKeyFields.get(0)).append(")");
+            foreignKeys.append(", FOREIGN KEY(")
+                    .append(String.join(",", primaryKeyFields))
+                    .append(") REFERENCES ").append(databaseEntity.getTableName()).append("(")
+                    .append(String.join(",", databaseEntity.getPrimaryKeyFields()))
+                    .append(")");
 
-            ForeignKeyAction onUpdateAction = foreignKeyOnUpdate.get(field);
+            ForeignKeyAction onUpdateAction = fieldModel.getForeignKeyUpdateAction();
             if(onUpdateAction != null) {
                 foreignKeys.append(" ON UPDATE ").append(getStringFromAction(onUpdateAction));
             }
 
-            ForeignKeyAction onDeleteAction = foreignKeyOnDelete.get(field);
+            ForeignKeyAction onDeleteAction = fieldModel.getForeignKeyDeleteAction();
             if(onDeleteAction != null) {
                 foreignKeys.append(" ON DELETE ").append(getStringFromAction(onDeleteAction));
             }
@@ -766,7 +872,8 @@ class DatabaseEntityModel {
     }
 
     private void generateNamesForSerializers() {
-        Set<TypeElement> uniqueSerializerTypes = new HashSet<TypeElement>(fieldSerializer.values());
+        Set<TypeElement> uniqueSerializerTypes = new HashSet<>(fieldSerializers.values());
+        Map<String,Integer> fieldNameOccurrences = new HashMap<>();
 
         for (TypeElement serializerTypeElement : uniqueSerializerTypes) {
             String simpleName = serializerTypeElement.getSimpleName().toString();
@@ -787,8 +894,8 @@ class DatabaseEntityModel {
     }
 
     private String findFieldNameForTypeElement(TypeElement typeElement) {
-        for (String field : fieldSerializer.keySet()) {
-            if (typeElement.equals(fieldSerializer.get(field))) {
+        for (String field : fieldSerializers.keySet()) {
+            if (typeElement.equals(fieldSerializers.get(field))) {
                 return field;
             }
         }
@@ -798,8 +905,8 @@ class DatabaseEntityModel {
     private void generateItemSql() {
         List<String> expressions = new ArrayList<String>();
         for (String field : primaryKeyFields) {
-            expressions.add(columnNames.get(field) + "=?");
-            itemSqlArgFields.add(field);
+            expressions.add(columns.get(field).getName() + "=?");
+            itemSqlArgColumns.add(field);
         }
         itemSql = String.join(" AND ", expressions);
     }
@@ -808,12 +915,8 @@ class DatabaseEntityModel {
         return tableName;
     }
 
-    public Set<String> getFieldNames() {
-        return fieldsInUse.keySet();
-    }
-
-    public Collection<String> getColumnNames() {
-        return columnNames.values();
+    public Map<String, FieldModel> getFields() {
+        return fieldModels;
     }
 
     public String getMapperPackageName() {
@@ -848,48 +951,16 @@ class DatabaseEntityModel {
         return itemSql;
     }
 
-    public List<String> getItemSqlArgFields() {
-        return itemSqlArgFields;
-    }
-
-    public FieldAccess getGetFieldAccess(String field) {
-        return fieldGetAccess.get(field);
-    }
-
-    public FieldAccess getSetFieldAccess(String field) {
-        return fieldSetAccess.get(field);
+    public List<String> getItemSqlArgColumns() {
+        return itemSqlArgColumns;
     }
 
     public boolean hasSerializer(String field) {
-        return fieldSerializer.containsKey(field);
-    }
-
-    public String getColumnName(String field) {
-        return columnNames.get(field);
+        return fieldSerializers.containsKey(field);
     }
 
     public String getSerializerFieldName(String field) {
         return fieldSerializerNames.get(field);
-    }
-
-    public String getGetFieldAnnotatedMethod(String field) {
-        return annotatedGetMethods.get(field);
-    }
-
-    public String getStandardGetMethod(String field) {
-        return getMethods.get(field);
-    }
-
-    public CursorType getCursorType(String field) {
-        return cursorTypes.get(field);
-    }
-
-    public String getSetFieldAnnotatedMethod(String field) {
-        return annotatedSetMethods.get(field);
-    }
-
-    public String getStandardSetMethod(String field) {
-        return setMethods.get(field);
     }
 
     public Set<String> getPrimaryKeyFields() {
@@ -897,14 +968,10 @@ class DatabaseEntityModel {
     }
 
     public boolean isFieldString(String field) {
-        return isString(fieldsInUse.get(field));
+        return isString(fieldModels.get(field).getElement());
     }
 
-    public boolean isDatabaseEntity(String field) {
-        return subModels.containsKey(field);
-    }
-
-    public DatabaseEntityModel getDatabaseEntity(String field) {
-        return subModels.get(field);
+    public Map<String, ColumnModel> getColumns() {
+        return columns;
     }
 }
