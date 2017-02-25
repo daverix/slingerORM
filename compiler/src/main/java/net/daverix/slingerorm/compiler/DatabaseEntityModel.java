@@ -58,7 +58,7 @@ class DatabaseEntityModel {
         if(annotation == null) throw new InvalidElementException("element not annotated with @DatabaseEntity", databaseTypeElement);
 
         String tableName = annotation.name();
-        if(tableName == null || tableName.equals(""))
+        if(tableName.equals(""))
             return databaseTypeElement.getSimpleName().toString();
 
         return tableName;
@@ -90,7 +90,7 @@ class DatabaseEntityModel {
             return field.getSimpleName().toString();
 
         String fieldName = fieldNameAnnotation.value();
-        if(fieldName == null || fieldName.equals(""))
+        if(fieldName.equals(""))
             throw new InvalidElementException("fieldName must not be null or empty!", field);
 
         return fieldName;
@@ -124,7 +124,7 @@ class DatabaseEntityModel {
             final String fieldType = getDatabaseType(field);
             builder.append(fieldName).append(" ").append(fieldType);
             PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
-            if( annotation != null || ( primaryKey != null && !primaryKey.equals("") && primaryKey.equals(field.getSimpleName().toString()) )) {
+            if(annotation != null || !primaryKey.equals("") && primaryKey.equals(field.getSimpleName().toString())) {
                 builder.append(" NOT NULL PRIMARY KEY");
                 primaryKeySet = true;
             }
@@ -163,7 +163,7 @@ class DatabaseEntityModel {
 
         DatabaseEntity annotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
         String key = annotation.primaryKeyField();
-        if(key == null || key.equals(""))
+        if(key.equals(""))
             return null;
 
         Element field = getFieldByName(validFields, key);
@@ -433,7 +433,7 @@ class DatabaseEntityModel {
                 continue;
 
             String fieldReference = annotation.value();
-            if(fieldReference == null || fieldReference.equals(""))
+            if(fieldReference.equals(""))
                 throw new InvalidElementException(element.getSimpleName() + " has a GetField annotation with empty value!", element);
 
             if(fieldReference.equals(fieldName))
@@ -559,7 +559,7 @@ class DatabaseEntityModel {
                 continue;
 
             String fieldReference = annotation.value();
-            if(fieldReference == null || fieldReference.equals(""))
+            if(fieldReference.equals(""))
                 throw new InvalidElementException(element.getSimpleName() + " has a SetField annotation with empty value!", element);
 
             if(fieldReference.equals(fieldName))
