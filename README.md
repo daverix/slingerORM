@@ -234,7 +234,7 @@ Here is some of the annotations that can be used on the methods in your storage 
         @Delete @Where("someVar = ?")
         void deleteItemsWithSomeVar(String someVar);
 
-        // slingerorm will match the "?" with your parameters in the order of the parameters
+        // slingerorm will match the "?" in order with your method parameters
         @Select @Where("_id = ?")
         ExampleEntity getEntity(long id);
 
