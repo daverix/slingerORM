@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 /**
  * Use this on a set method if the set + name doesn't match the name of the field in the class
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.METHOD})
 public @interface SetField {
     String value();

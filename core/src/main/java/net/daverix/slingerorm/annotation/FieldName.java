@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 /**
  * Use this on a field to change the name of the corresponding field in the database table
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.FIELD})
 public @interface FieldName {
     String value();

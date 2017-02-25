@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 /**
  * Use this to mark a field as a primary key
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.FIELD})
 public @interface PrimaryKey {
 

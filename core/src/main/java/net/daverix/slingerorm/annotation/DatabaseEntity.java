@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * Mark a class as an entity that can be mapped to a database table. The optional value is used for
  * the table name.
  */
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.TYPE})
 public @interface DatabaseEntity {
     String name() default "";
