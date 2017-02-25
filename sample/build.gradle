@@ -1,5 +1,4 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.neenbedankt.android-apt'
 
 android {
     compileSdkVersion 25
@@ -18,7 +17,7 @@ android {
 
 dependencies {
     compile project(':android')
-    apt project(':compiler')
+    annotationProcessor project(':compiler')
 
     testCompile 'org.mockito:mockito-core:1.10.19'
     testCompile 'org.robolectric:robolectric:3.0'

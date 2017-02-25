@@ -63,7 +63,7 @@ import javax.tools.JavaFileObject;
 @SupportedAnnotationTypes({
         "net.daverix.slingerorm.annotation.DatabaseStorage"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class DatabaseStorageProcessor extends AbstractProcessor {
     private static final String QUALIFIED_NAME_SQLITE_DATABASE = "android.database.sqlite.SQLiteDatabase";
     private static final List<String> SUPPORTED_RETURN_TYPES_FOR_SELECT = Arrays.asList(
