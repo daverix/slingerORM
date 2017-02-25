@@ -18,8 +18,8 @@ package net.daverix.slingerorm.compiler;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 class InsertMethod implements StorageMethod {
     private final String methodName;
@@ -40,8 +40,7 @@ class InsertMethod implements StorageMethod {
     @Override
     public void write(Writer writer) throws IOException {
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " item) {\n");
-        writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
+        writer.write("    public void " + methodName + "(" + databaseEntityTypeName + " item) {\n");
         writer.write("        if(item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writer.write("\n");
         writer.write("        db.insertOrThrow(" + mapperDescription.getVariableName() + ".getTableName(), null, " + mapperDescription.getVariableName() + ".mapValues(item));\n");
@@ -51,9 +50,7 @@ class InsertMethod implements StorageMethod {
 
     @Override
     public Collection<String> getImports() {
-        return Arrays.asList("android.database.sqlite.SQLiteDatabase",
-                "android.content.ContentValues",
-                databaseEntityTypeQualifiedName);
+        return Collections.singletonList(databaseEntityTypeQualifiedName);
     }
 
     @Override

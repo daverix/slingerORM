@@ -18,8 +18,8 @@ package net.daverix.slingerorm.compiler;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 class UpdateMethod implements StorageMethod {
     private final String methodName;
@@ -42,8 +42,7 @@ class UpdateMethod implements StorageMethod {
         if(writer == null) throw new IllegalArgumentException("writer is null");
 
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db, " + databaseEntityTypeName + " item) {\n");
-        writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
+        writer.write("    public void " + methodName + "(" + databaseEntityTypeName + " item) {\n");
         writer.write("        if(item == null) throw new IllegalArgumentException(\"entity is null\");\n");
         writer.write("\n");
         writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".mapValues(item), " + mapperDescription.getVariableName() + ".getItemQuery(), " + mapperDescription.getVariableName() + ".getItemQueryArguments(item));\n");
@@ -53,9 +52,7 @@ class UpdateMethod implements StorageMethod {
 
     @Override
     public Collection<String> getImports() {
-        return Arrays.asList("android.database.sqlite.SQLiteDatabase",
-                "android.content.ContentValues",
-                databaseEntityTypeQualifiedName);
+        return Collections.singletonList(databaseEntityTypeQualifiedName);
     }
 
     @Override

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -136,8 +137,6 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     private StorageMethod createStorageMethod(ExecutableElement methodElement) throws InvalidElementException {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
-        checkFirstParameterMustBeSQLiteDatabase(methodElement);
-
         if (isAnnotationPresent(methodElement, Insert.class)) {
             return createInsertMethod(methodElement);
         } else if (isAnnotationPresent(methodElement, Replace.class)) {
@@ -195,11 +194,12 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
 
         List<? extends VariableElement> parameters = methodElement.getParameters();
-        int methodSqlParams = parameters.size() - 1;
-        if(methodSqlParams < 0) methodSqlParams = 0;
+        int methodSqlParams = parameters.size();
 
         if(sqlArguments != methodSqlParams) {
-            throw new InvalidElementException(String.format("the sql where argument has %d arguments, the method contains %d", sqlArguments, methodSqlParams), methodElement);
+            throw new InvalidElementException(String.format(Locale.ENGLISH,
+                    "the sql where argument has %d arguments, the method contains %d",
+                    sqlArguments, methodSqlParams), methodElement);
         }
 
         Collection<String> parameterGetters = getWhereArgs(parameters);
@@ -273,7 +273,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
             String typeName = getTypeName(variableElement.asType().getKind(), variableElement);
             params[i] = typeName + " " + variableElement.getSimpleName();
         }
-        return String.join(", ", params);
+        return String.join(", ", Arrays.asList(params));
     }
 
     private String getTypeName(TypeKind typeKind, Element element) throws InvalidElementException {
@@ -309,9 +309,9 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         checkUniqueAnnotations(Delete.class, methodElement);
-        checkSecondParameterMustBeDatabaseEntity(methodElement);
+        checkFirstParameterMustBeDatabaseEntity(methodElement);
 
-        TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
+        TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new DeleteMethod(methodElement.getSimpleName().toString(),
@@ -324,9 +324,9 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         checkUniqueAnnotations(Update.class, methodElement);
-        checkSecondParameterMustBeDatabaseEntity(methodElement);
+        checkFirstParameterMustBeDatabaseEntity(methodElement);
 
-        TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
+        TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new UpdateMethod(methodElement.getSimpleName().toString(),
@@ -339,10 +339,10 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         checkUniqueAnnotations(Replace.class, methodElement);
-        checkSecondParameterMustBeDatabaseEntity(methodElement);
-        checkHasTwoParameters(methodElement);
+        checkFirstParameterMustBeDatabaseEntity(methodElement);
+        checkHasOneParameter(methodElement);
 
-        TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
+        TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new ReplaceMethod(methodElement.getSimpleName().toString(),
@@ -356,10 +356,10 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         checkUniqueAnnotations(Insert.class, methodElement);
-        checkSecondParameterMustBeDatabaseEntity(methodElement);
-        checkHasTwoParameters(methodElement);
+        checkFirstParameterMustBeDatabaseEntity(methodElement);
+        checkHasOneParameter(methodElement);
 
-        TypeElement databaseEntityElement = getDatabaseEntityElementFromSecondParameter(methodElement);
+        TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
         MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
         return new InsertMethod(methodElement.getSimpleName().toString(),
@@ -370,10 +370,10 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     }
 
 
-    private TypeElement getDatabaseEntityElementFromSecondParameter(ExecutableElement methodElement) {
+    private TypeElement getDatabaseEntityElementFromFirstParameter(ExecutableElement methodElement) {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
-        VariableElement secondParameter = methodElement.getParameters().get(1);
+        VariableElement secondParameter = methodElement.getParameters().get(0);
         return (TypeElement) ((DeclaredType) secondParameter.asType()).asElement();
     }
 
@@ -384,44 +384,28 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
             throw new InvalidElementException("Only void is supported as return type for this method", methodElement);
     }
 
-    private void checkHasTwoParameters(ExecutableElement methodElement) throws InvalidElementException {
+    private void checkHasOneParameter(ExecutableElement methodElement) throws InvalidElementException {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         List<? extends VariableElement> parameters = methodElement.getParameters();
-        if (parameters.size() != 2)
-            throw new InvalidElementException("method must have exactly two parameters", methodElement);
+        if (parameters.size() != 1)
+            throw new InvalidElementException("method must have exactly one parameters", methodElement);
     }
 
-    private void checkSecondParameterMustBeDatabaseEntity(ExecutableElement methodElement) throws InvalidElementException {
-        if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
-
-        List<? extends VariableElement> parameters = methodElement.getParameters();
-        if (parameters.size() < 2)
-            throw new InvalidElementException("method must have at least two parameters where the first is of type android.database.sqlite.SQLiteDatabase and the second is a type annotated with @DatabaseEntity", methodElement);
-
-        VariableElement secondParameter = parameters.get(1);
-        if (secondParameter.asType().getKind() != TypeKind.DECLARED)
-            throw new InvalidElementException("second parameter must be a declared type annotated with @DatabaseEntity", secondParameter);
-
-        TypeElement parameterTypeElement = (TypeElement) ((DeclaredType) secondParameter.asType()).asElement();
-        if(parameterTypeElement.getAnnotation(DatabaseEntity.class) == null)
-            throw new InvalidElementException("second parameter must be annotated with @DatabaseEntity", secondParameter);
-    }
-
-    private void checkFirstParameterMustBeSQLiteDatabase(ExecutableElement methodElement) throws InvalidElementException {
+    private void checkFirstParameterMustBeDatabaseEntity(ExecutableElement methodElement) throws InvalidElementException {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         List<? extends VariableElement> parameters = methodElement.getParameters();
         if (parameters.size() < 1)
-            throw new InvalidElementException("method must have at least one parameter where the first is of type android.database.sqlite.SQLiteDatabase", methodElement);
+            throw new InvalidElementException("method must have at least one parameter where the first is a type annotated with @DatabaseEntity", methodElement);
 
         VariableElement firstParameter = parameters.get(0);
         if (firstParameter.asType().getKind() != TypeKind.DECLARED)
-            throw new InvalidElementException("first parameter must be the type android.database.sqlite.SQLiteDatabase", firstParameter);
+            throw new InvalidElementException("first parameter must be a declared type annotated with @DatabaseEntity", firstParameter);
 
         TypeElement parameterTypeElement = (TypeElement) ((DeclaredType) firstParameter.asType()).asElement();
-        if (!QUALIFIED_NAME_SQLITE_DATABASE.equals(parameterTypeElement.getQualifiedName().toString()))
-            throw new InvalidElementException("first parameter must be the type android.database.sqlite.SQLiteDatabase", firstParameter);
+        if(parameterTypeElement.getAnnotation(DatabaseEntity.class) == null)
+            throw new InvalidElementException("first parameter must be annotated with @DatabaseEntity", firstParameter);
     }
 
     private void checkUniqueAnnotations(Class<? extends Annotation> annotationClass, ExecutableElement methodElement) throws InvalidElementException {
@@ -443,7 +427,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(otherAnnotationClass == null) throw new IllegalArgumentException("otherAnnotationClass is null");
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
-        if (!annotationClass.equals(otherAnnotationClass) && isAnnotationPresent(methodElement, otherAnnotationClass)) {
+         if (!annotationClass.equals(otherAnnotationClass) && isAnnotationPresent(methodElement, otherAnnotationClass)) {
             throw new InvalidElementException(String.format("Method can't be annotated with both @%s and @%s",
                     annotationClass.getSimpleName(), otherAnnotationClass.getSimpleName()), methodElement);
         }

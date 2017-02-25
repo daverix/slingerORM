@@ -27,7 +27,7 @@ import java.util.Set;
 
 final class DatabaseStorageBuilder {
     private final Writer writer;
-    private final Set<StorageMethod> storageMethods = new HashSet<StorageMethod>();
+    private final Set<StorageMethod> storageMethods = new HashSet<>();
     private String className;
     private String packageName;
     private String storageInterfaceName;
@@ -97,14 +97,16 @@ final class DatabaseStorageBuilder {
 
     private void writeClass(Collection<MapperDescription> mapperDescriptions) throws IOException {
         writer.write("public class " + className + " implements " + storageInterfaceName + " {\n");
+        writer.write("    private final SQLiteDatabase db;\n");
         for(MapperDescription description : mapperDescriptions) {
             writer.write("    private final Mapper<" + description.getEntityName() + "> " + description.getVariableName() + ";\n");
         }
         writeln();
 
-        writer.write("    public " + className + "(" + getConstructorParameters(mapperDescriptions) + ") {\n");
+        writer.write("    private " + className + "(Builder builder) {\n");
+        writer.write("        this.db = builder.db;\n");
         for(MapperDescription description : mapperDescriptions) {
-            writer.write("        this." + description.getVariableName() + "= " + description.getVariableName() + ";\n");
+            writer.write("        this." + description.getVariableName() + "= builder." + description.getVariableName() + ";\n");
         }
         writer.write("    }\n");
         writeln();
@@ -185,11 +187,21 @@ final class DatabaseStorageBuilder {
 
     private void writeStorageBuilder(Collection<MapperDescription> mapperDescriptions) throws IOException {
         writer.write("    public static final class Builder {\n");
+        writer.write("        private SQLiteDatabase db;\n");
+
         for(MapperDescription description : mapperDescriptions) {
             writer.write("        private Mapper<" + description.getEntityName() + "> " + description.getVariableName() + ";\n");
         }
         writeln();
         writer.write("        private Builder() {\n");
+        writer.write("        }\n");
+        writeln();
+
+        writer.write("        public Builder database(SQLiteDatabase db) {\n");
+        writer.write("            if(db == null)\n");
+        writer.write("                throw new IllegalArgumentException(\"db is null\");\n\n");
+        writer.write("            this.db = db;\n");
+        writer.write("            return this;\n");
         writer.write("        }\n");
         writeln();
 
@@ -202,6 +214,10 @@ final class DatabaseStorageBuilder {
         }
 
         writer.write("        public " + storageInterfaceName + " build() {\n");
+        writer.write("            if(db == null)\n");
+        writer.write("                throw new IllegalStateException(\"database must be set\");\n");
+        writeln();
+
         for(MapperDescription description : mapperDescriptions) {
             writer.write("            if(" + description.getVariableName() + " == null)\n");
             if(description.hasEmptyConstructor()) {
@@ -212,20 +228,10 @@ final class DatabaseStorageBuilder {
             }
             writeln();
         }
-        String constructorParameters = getConstructorParametersForBuilder(mapperDescriptions);
-        writer.write("            return new " + className + "(" + constructorParameters + ");\n");
+
+        writer.write("            return new " + className + "(this);\n");
         writer.write("        }\n");
 
         writer.write("    }\n");
     }
-
-    private String getConstructorParametersForBuilder(Collection<MapperDescription> descriptions) {
-        List<String> names = new ArrayList<String>();
-        for(MapperDescription description : descriptions) {
-            names.add(description.getVariableName());
-        }
-
-        return String.join(", ", names);
-    }
-
 }

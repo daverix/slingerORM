@@ -35,9 +35,7 @@ class CreateTableMethod implements StorageMethod {
         if(writer == null) throw new IllegalArgumentException("writer is null");
 
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(SQLiteDatabase db) {\n");
-        writer.write("        if(db == null) throw new IllegalArgumentException(\"db is null\");\n");
-        writer.write("\n");
+        writer.write("    public void " + methodName + "() {\n");
         writer.write("        db.execSQL(" + mapperDescription.getVariableName() + ".createTable());\n");
         writer.write("    }\n");
         writer.write("\n");
@@ -45,7 +43,7 @@ class CreateTableMethod implements StorageMethod {
 
     @Override
     public Collection<String> getImports() {
-        return Collections.singletonList("android.database.sqlite.SQLiteDatabase");
+        return Collections.emptyList();
     }
 
     @Override

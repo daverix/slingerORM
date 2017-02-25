@@ -44,7 +44,7 @@ public class ComplexEntityStorageTest {
     public void setUp() {
         db = SQLiteDatabase.create(null);
         sut = SlingerComplexEntityStorage.builder().build();
-        sut.createTable(db);
+        sut.createTable();
     }
 
     @Test
@@ -57,7 +57,7 @@ public class ComplexEntityStorageTest {
 
         try {
             db.beginTransaction();
-            sut.insert(db, entity);
+            sut.insert(entity);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -65,7 +65,7 @@ public class ComplexEntityStorageTest {
 
         assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
 
-        final ComplexEntity actual = sut.getEntity(db, expectedId);
+        final ComplexEntity actual = sut.getEntity(expectedId);
 
         assertThat(actual).named("entity").isNotNull();
 
@@ -81,10 +81,10 @@ public class ComplexEntityStorageTest {
         final long expectedId = 42;
         final ComplexEntity entity = createEntity(expectedId, "david", 2, true);
 
-        sut.insert(db, entity);
+        sut.insert(entity);
         assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
 
-        sut.delete(db, entity);
+        sut.delete(entity);
         assertAbout(database()).that(db).withTable("Complex").isEmpty();
     }
 
@@ -98,14 +98,14 @@ public class ComplexEntityStorageTest {
 
         try {
             db.beginTransaction();
-            sut.insert(db, oldEntity);
-            sut.update(db, entity);
+            sut.insert(oldEntity);
+            sut.update(entity);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
 
-        final ComplexEntity actual = sut.getEntity(db, expectedId);
+        final ComplexEntity actual = sut.getEntity(expectedId);
 
         assertThat(actual).named("entity").isNotNull();
         assertThat(actual.getId()).named("id").isEqualTo(expectedId);
@@ -122,14 +122,14 @@ public class ComplexEntityStorageTest {
 
         try {
             db.beginTransaction();
-            sut.insert(db, first);
-            sut.insert(db, second);
+            sut.insert(first);
+            sut.insert(second);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
 
-        final List<ComplexEntity> actual = sut.getAllEntities(db);
+        final List<ComplexEntity> actual = sut.getAllEntities();
 
         assertThat(actual).isNotNull();
         assertThat(actual).isNotEmpty();
@@ -143,14 +143,14 @@ public class ComplexEntityStorageTest {
 
         try {
             db.beginTransaction();
-            sut.insert(db, first);
-            sut.insert(db, second);
+            sut.insert(first);
+            sut.insert(second);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
 
-        final List<ComplexEntity> actual = sut.getComplexEntities(db, true);
+        final List<ComplexEntity> actual = sut.getComplexEntities(true);
 
         assertThat(actual).isNotNull();
         assertThat(actual).isNotEmpty();
