@@ -22,9 +22,11 @@ import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.DatabaseStorage;
 import net.daverix.slingerorm.annotation.Delete;
 import net.daverix.slingerorm.annotation.Insert;
+import net.daverix.slingerorm.annotation.OrderBy;
 import net.daverix.slingerorm.annotation.Replace;
 import net.daverix.slingerorm.annotation.Select;
 import net.daverix.slingerorm.annotation.Update;
+import net.daverix.slingerorm.annotation.Where;
 import net.daverix.slingerorm.serialization.DefaultSerializer;
 
 import java.io.BufferedWriter;
@@ -182,9 +184,10 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         checkUniqueAnnotations(Select.class, methodElement);
 
-        Select selectAnnotation = methodElement.getAnnotation(Select.class);
-        String where = selectAnnotation.where().equals("") ? null : selectAnnotation.where();
-        String orderBy = selectAnnotation.orderBy().equals("") ? null : selectAnnotation.orderBy();
+        Where whereAnnotation = methodElement.getAnnotation(Where.class);
+        OrderBy orderByAnnotation = methodElement.getAnnotation(OrderBy.class);
+        String where = whereAnnotation != null ? whereAnnotation.value() : null;
+        String orderBy = orderByAnnotation != null ? orderByAnnotation.value() : null;
 
         int sqlArguments = getSqliteArgumentCount(where);
 

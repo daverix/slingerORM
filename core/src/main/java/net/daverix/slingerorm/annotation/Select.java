@@ -24,7 +24,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.METHOD})
 public @interface Select {
-    String where() default "";
-    String orderBy() default "";
-    int limit() default -1;
+
 }

@@ -24,6 +24,7 @@ import net.daverix.slingerorm.annotation.Replace;
 import net.daverix.slingerorm.annotation.Select;
 import net.daverix.slingerorm.annotation.DatabaseStorage;
 import net.daverix.slingerorm.annotation.Update;
+import net.daverix.slingerorm.annotation.Where;
 
 import java.util.List;
 
@@ -44,12 +45,12 @@ public interface ComplexEntityStorage {
     @Delete
     void delete(ComplexEntity complexEntity);
 
-    @Select(where = "_id = ?")
+    @Select @Where("_id = ?")
     ComplexEntity getEntity(long id);
 
     @Select
     List<ComplexEntity> getAllEntities();
 
-    @Select(where = "isComplex = ?")
+    @Select @Where("isComplex = ?")
     List<ComplexEntity> getComplexEntities(boolean complex);
 }
