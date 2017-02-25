@@ -35,13 +35,13 @@ The bare minimum that is needed for SlingerORM to work is an entity and an inter
     @DatabaseStorage
     public interface ExampleStorage {
         @CreateTable(ExampleEntity.class)
-        void createTable(SQLiteDatabase db);
+        void createTable();
 
         @Insert
-        void insert(SQLiteDatabase db, ExampleEntity entity);
+        void insert(ExampleEntity entity);
 
         @Delete
-        void delete(SQLiteDatabase db, ExampleEntity entity);
+        void delete(ExampleEntity entity);
 
         @Select
         List<ExampleEntity> getAllExamples();
@@ -51,14 +51,17 @@ Get an instance of your interface by accessing the generated builder by prefixin
 name with "Slinger":
 
     SQLiteDatabase db = ...
-    ExampleStorage storage = SlingerExampleStorage.builder().build();
+    ExampleStorage storage = SlingerExampleStorage
+        .builder()
+        .database(db)
+        .build();
 
-    storage.createTable(db);
+    storage.createTable();
 
     ExampleEntity entity = new ExampleEntity()
     entity.setId(42);
     entity.setName("David");
-    storage.insert(db, entity);
+    storage.insert(entity);
 
     List<ExampleEntity> examples = storage.getAllExamples();
     ...
@@ -202,6 +205,7 @@ in the storage class:
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
         .exampleEntityMapper(new ExampleEntityMapper())
         .otherExampleMapper(new OtherExampleMapper())
+        .database(db)
         .build();
     ...
 
@@ -211,29 +215,29 @@ Here is some of the annotations that can be used on the methods in your storage 
     public interface ExampleEntityStorage {
         //annotate method with this to create a table based on the given entity class
         @CreateTable(ExampleEntity.class)
-        void createTable(SQLiteDatabase db);
+        void createTable();
 
-        // slingerORM will insert the second parameter
+        // slingerORM will run an INSERT INTO statement
         @Insert
-        void insert(SQLiteDatabase db, ExampleEntity exampleEntity);
+        void insert(ExampleEntity exampleEntity);
 
-        // slingerORM will update the entity in the second parameter
+        // slingerORM will run an UPDATE statement using primary keys in the where clause
         @Update
-        void update(SQLiteDatabase db, ExampleEntity exampleEntity);
+        void update(ExampleEntity exampleEntity);
 
         //using an empty delete together with an "@DatabaseEntity" annotated class as parameter deletes the entity.
         @Delete
-        void delete(SQLiteDatabase db, ExampleEntity exampleEntity);
+        void delete(ExampleEntity exampleEntity);
 
         //you can also specify "where" to delete everything that matches the given query
         @Delete(where = "someVar = ?")
-        void deleteItemsWithSomeVar(SQLiteDatabase db, String someVar);
+        void deleteItemsWithSomeVar(String someVar);
 
-        // slingerorm will match the "?" with your parameters, starting with the second from the left
+        // slingerorm will match the "?" with your parameters in the order of the parameters
         @Select(where = "_id = ?")
-        ExampleEntity getEntity(SQLiteDatabase db, long id);
+        ExampleEntity getEntity(long id);
 
-        // not setting any parameters on the annotation will cause it to use default and query all
+        // not setting any parameters on the annotation will cause it to use default and query everything
         @Select
         List<ExampleEntity> getAll();
 
@@ -299,7 +303,7 @@ You refer to it this way in gradle:
 License
 -------
 
-    Copyright 2015 David Laurell
+    Copyright 2017 David Laurell
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
