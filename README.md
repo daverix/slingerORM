@@ -225,24 +225,25 @@ Here is some of the annotations that can be used on the methods in your storage 
         @Update
         void update(ExampleEntity exampleEntity);
 
-        //using an empty delete together with an "@DatabaseEntity" annotated class as parameter deletes the entity.
+        // using an empty delete together with an "@DatabaseEntity" annotated class as parameter 
+        // deletes the entity.
         @Delete
         void delete(ExampleEntity exampleEntity);
 
-        //you can also specify "where" to delete everything that matches the given query
-        @Delete(where = "someVar = ?")
+        // you can also specify a "where" annotation to delete everything that matches the given query
+        @Delete @Where("someVar = ?")
         void deleteItemsWithSomeVar(String someVar);
 
         // slingerorm will match the "?" with your parameters in the order of the parameters
-        @Select(where = "_id = ?")
+        @Select @Where("_id = ?")
         ExampleEntity getEntity(long id);
 
-        // not setting any parameters on the annotation will cause it to use default and query everything
+        // not annotating with "@Where" will cause it to use default and query everything
         @Select
         List<ExampleEntity> getAll();
 
-        // orderBy and limit can be set in the annotation which will be part of the sql query
-        @Select(orderBy = "created DESC", limit = 5)
+        // @OrderBy and @Limit can be set on the method to add additional data to the sql query
+        @Select @OrderBy("created DESC") @Limit(5)
         List<ExampleEntity> getLatest(SQLiteDatabase db);
     }
 
