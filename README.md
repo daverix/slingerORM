@@ -299,7 +299,7 @@ it's placed in the pkg/ folder in the root of the project.
 You refer to it this way in gradle:
 
     compile 'net.daverix.slingerorm:slingerorm-android:0.4'
-    provided 'net.daverix.slingerorm:compiler:0.4'
+    annotationProcessor 'net.daverix.slingerorm:compiler:0.4'
 
 License
 -------
