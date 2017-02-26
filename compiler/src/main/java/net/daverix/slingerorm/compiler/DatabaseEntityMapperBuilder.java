@@ -16,8 +16,6 @@
 
 package net.daverix.slingerorm.compiler;
 
-import net.daverix.slingerorm.serialization.DefaultSerializer;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -109,12 +107,12 @@ public class DatabaseEntityMapperBuilder {
 
     private void writeClass() throws IOException {
         writer.write("public class " + databaseEntityClassName + "Mapper implements Mapper<" + databaseEntityClassName + "> {\n");
-        if(!DefaultSerializer.class.getCanonicalName().equals(serializerQualifiedName)) {
+        if(!Object.class.getCanonicalName().equals(serializerQualifiedName)) {
             writer.write("    private final " + serializerClassName + " serializer;\n");
         }
         writeln();
 
-        if(DefaultSerializer.class.getCanonicalName().equals(serializerQualifiedName)) {
+        if(Object.class.getCanonicalName().equals(serializerQualifiedName)) {
             writer.write("    public " + databaseEntityClassName + "Mapper() {\n");
         }
         else {
@@ -145,7 +143,7 @@ public class DatabaseEntityMapperBuilder {
 
         writer.write("    @Override\n");
         writer.write("    public String[] getFieldNames() {\n");
-        writer.write("        return new String[] { " + String.join(", ", getCitedFieldNames()) + " };\n");
+        writer.write("        return new String[] { " + String.join(", ", (CharSequence[]) getCitedFieldNames()) + " };\n");
         writer.write("    }\n");
         writeln();
 
@@ -213,15 +211,17 @@ public class DatabaseEntityMapperBuilder {
     }
 
     private void writeImports() throws IOException {
-        Set<String> qualifiedNames = new HashSet<String>();
+        Set<String> qualifiedNames = new HashSet<>();
         qualifiedNames.add("net.daverix.slingerorm.android.Mapper");
-        qualifiedNames.add(serializerQualifiedName);
+        if(!"java.lang.Object".equals(serializerQualifiedName)) {
+            qualifiedNames.add(serializerQualifiedName);
+        }
         qualifiedNames.add("android.content.ContentValues");
         qualifiedNames.add("android.database.Cursor");
         qualifiedNames.add("java.util.List");
         qualifiedNames.add("java.util.ArrayList");
 
-        List<String> sortedNames = new ArrayList<String>(qualifiedNames);
+        List<String> sortedNames = new ArrayList<>(qualifiedNames);
         Collections.sort(sortedNames);
         for(String qualifiedName : sortedNames) {
             writeImport(qualifiedName);

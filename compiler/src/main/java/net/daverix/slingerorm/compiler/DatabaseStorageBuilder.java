@@ -169,6 +169,8 @@ final class DatabaseStorageBuilder {
             qualifiedNames.add(mapperDescription.getQualifiedName());
         }
 
+        qualifiedNames.remove("");
+
         List<String> sortedNames = new ArrayList<String>(qualifiedNames);
         Collections.sort(sortedNames);
         for(String qualifiedName : sortedNames) {

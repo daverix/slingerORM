@@ -27,7 +27,6 @@ import net.daverix.slingerorm.annotation.Replace;
 import net.daverix.slingerorm.annotation.Select;
 import net.daverix.slingerorm.annotation.Update;
 import net.daverix.slingerorm.annotation.Where;
-import net.daverix.slingerorm.serialization.DefaultSerializer;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -159,7 +158,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     private MapperDescription getMapperDescription(TypeElement databaseEntity) throws InvalidElementException {
         DatabaseEntity entityAnnotation = databaseEntity.getAnnotation(DatabaseEntity.class);
         TypeElement serializerType = getSerializerType(entityAnnotation);
-        boolean emptyConstructor = DefaultSerializer.class.getCanonicalName().equals(serializerType.getQualifiedName().toString());
+        boolean emptyConstructor = Object.class.getCanonicalName().equals(serializerType.getQualifiedName().toString());
 
         return new MapperDescription(databaseEntity.getQualifiedName().toString(),
                 databaseEntity.getSimpleName().toString(),
@@ -194,7 +193,6 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         TypeMirror returnType = methodElement.getReturnType();
         if(returnType.getKind() != TypeKind.DECLARED)
             throw new InvalidElementException("Method " + methodElement.getSimpleName() + " must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", methodElement);
-
 
         List<? extends VariableElement> parameters = methodElement.getParameters();
         int methodSqlParams = parameters.size();
