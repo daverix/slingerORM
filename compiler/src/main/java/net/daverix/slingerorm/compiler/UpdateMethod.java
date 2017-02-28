@@ -39,13 +39,16 @@ class UpdateMethod implements StorageMethod {
 
     @Override
     public void write(Writer writer) throws IOException {
-        if(writer == null) throw new IllegalArgumentException("writer is null");
+        if (writer == null) throw new IllegalArgumentException("writer is null");
 
         writer.write("    @Override\n");
         writer.write("    public void " + methodName + "(" + databaseEntityTypeName + " item) {\n");
-        writer.write("        if(item == null) throw new IllegalArgumentException(\"entity is null\");\n");
+        writer.write("        if (item == null) throw new IllegalArgumentException(\"entity is null\");\n");
         writer.write("\n");
-        writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(), " + mapperDescription.getVariableName() + ".mapValues(item), " + mapperDescription.getVariableName() + ".getItemQuery(), " + mapperDescription.getVariableName() + ".getItemQueryArguments(item));\n");
+        writer.write("        db.update(" + mapperDescription.getVariableName() + ".getTableName(),\n");
+        writer.write("                " + mapperDescription.getVariableName() + ".mapValues(item),\n");
+        writer.write("                " + mapperDescription.getVariableName() + ".getItemQuery(),\n");
+        writer.write("                " + mapperDescription.getVariableName() + ".getItemQueryArguments(item));\n");
         writer.write("    }\n");
         writer.write("\n");
     }

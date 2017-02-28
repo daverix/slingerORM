@@ -107,7 +107,7 @@ final class DatabaseStorageBuilder {
         writer.write("    private " + className + "(Builder builder) {\n");
         writer.write("        this.db = builder.db;\n");
         for(MapperDescription description : mapperDescriptions) {
-            writer.write("        this." + description.getVariableName() + "= builder." + description.getVariableName() + ";\n");
+            writer.write("        this." + description.getVariableName() + " = builder." + description.getVariableName() + ";\n");
         }
         writer.write("    }\n");
         writeln();
@@ -185,7 +185,7 @@ final class DatabaseStorageBuilder {
         writeln();
 
         writer.write("        public Builder database(SQLiteDatabase db) {\n");
-        writer.write("            if(db == null)\n");
+        writer.write("            if (db == null)\n");
         writer.write("                throw new IllegalArgumentException(\"db is null\");\n\n");
         writer.write("            this.db = db;\n");
         writer.write("            return this;\n");
@@ -201,12 +201,12 @@ final class DatabaseStorageBuilder {
         }
 
         writer.write("        public " + storageInterfaceName + " build() {\n");
-        writer.write("            if(db == null)\n");
+        writer.write("            if (db == null)\n");
         writer.write("                throw new IllegalStateException(\"database must be set\");\n");
         writeln();
 
         for(MapperDescription description : mapperDescriptions) {
-            writer.write("            if(" + description.getVariableName() + " == null)\n");
+            writer.write("            if (" + description.getVariableName() + " == null)\n");
             if(description.hasEmptyConstructor()) {
                 writer.write("                " + description.getVariableName() + " = new " + description.getEntityName() + "Mapper();\n");
             }
