@@ -7,6 +7,8 @@ import com.google.common.truth.FailureStrategy;
 import com.google.common.truth.Subject;
 import com.google.common.truth.SubjectFactory;
 
+import static com.google.common.truth.Truth.assertAbout;
+
 public class SqliteDatabaseSubject extends Subject<SqliteDatabaseSubject, SQLiteDatabase> {
     private static final SubjectFactory<SqliteDatabaseSubject, SQLiteDatabase> DATABASE_SUBJECT = new SubjectFactory<SqliteDatabaseSubject, SQLiteDatabase>() {
         @Override
@@ -14,12 +16,13 @@ public class SqliteDatabaseSubject extends Subject<SqliteDatabaseSubject, SQLite
             return new SqliteDatabaseSubject(fs, that);
         }
     };
-    public static SubjectFactory<SqliteDatabaseSubject, SQLiteDatabase> database() {
-        return DATABASE_SUBJECT;
+
+    private SqliteDatabaseSubject(FailureStrategy failureStrategy, SQLiteDatabase subject) {
+        super(failureStrategy, subject);
     }
 
-    public SqliteDatabaseSubject(FailureStrategy failureStrategy, SQLiteDatabase subject) {
-        super(failureStrategy, subject);
+    public static SqliteDatabaseSubject assertThat(SQLiteDatabase db) {
+        return assertAbout(DATABASE_SUBJECT).that(db);
     }
 
     public DatabaseTableSubject withTable(String table) {

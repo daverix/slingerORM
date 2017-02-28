@@ -18,7 +18,7 @@ import java.util.Date;
 import static com.google.common.truth.Truth.assertThat;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = BuildConfig.class)
+@Config(constants = BuildConfig.class, manifest = Config.NONE)
 public class SerializerEntityMapperTest {
     private Mapper<SerializerEntity> sut;
 

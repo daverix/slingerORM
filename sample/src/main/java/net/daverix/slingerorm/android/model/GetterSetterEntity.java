@@ -4,7 +4,7 @@ import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.GetField;
 import net.daverix.slingerorm.annotation.SetField;
 
-@DatabaseEntity(primaryKeyField = "mId")
+@DatabaseEntity(primaryKeyFields = "mId")
 public class GetterSetterEntity {
     private String mId;
     private int mNumber;

@@ -16,6 +16,6 @@
 
 package net.daverix.slingerorm.compiler;
 
-public interface FieldMethod {
+interface FieldMethod {
     String getMethod();
 }

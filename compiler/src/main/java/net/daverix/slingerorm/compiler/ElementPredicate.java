@@ -15,6 +15,8 @@
  */
 package net.daverix.slingerorm.compiler;
 
-interface Predicate<T> {
+import javax.lang.model.element.Element;
+
+interface ElementPredicate<T extends Element> {
     boolean test(T item) throws InvalidElementException;
 }

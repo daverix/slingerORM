@@ -18,7 +18,7 @@ import java.util.List;
 import static com.google.common.truth.Truth.assertThat;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = BuildConfig.class)
+@Config(constants = BuildConfig.class, manifest = Config.NONE)
 public class NativeFieldsMapperTest {
     private Mapper<NativeFieldsEntity> sut;
 
@@ -112,7 +112,7 @@ public class NativeFieldsMapperTest {
         cursor.addRow(createCursorRow(second));
 
         List<NativeFieldsEntity> actual = sut.mapList(cursor);
-        assertThat(actual).containsExactlyElementsIn(Arrays.asList(first, second));
+        assertThat(actual).containsExactly(first, second);
     }
 
     private Object[] createCursorRow(NativeFieldsEntity entity) {

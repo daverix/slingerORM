@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DatabaseEntityMapperBuilder {
+class DatabaseEntityMapperBuilder {
     private final Writer writer;
     private String databaseEntityClassName;
     private String serializerClassName;
@@ -36,70 +36,72 @@ public class DatabaseEntityMapperBuilder {
     private List<FieldMethod> getters;
     private List<FieldMethod> setters;
     private String itemSql;
-    private String itemSqlArguments;
+    private List<String> itemSqlArguments;
 
     private DatabaseEntityMapperBuilder(Writer writer) {
         this.writer = writer;
     }
 
-    public static DatabaseEntityMapperBuilder builder(Writer writer) {
+    static DatabaseEntityMapperBuilder builder(Writer writer) {
         return new DatabaseEntityMapperBuilder(writer);
     }
 
-    public DatabaseEntityMapperBuilder setSerializerQualifiedName(String serializerQualifiedName) {
+    DatabaseEntityMapperBuilder setSerializerQualifiedName(String serializerQualifiedName) {
         this.serializerQualifiedName = serializerQualifiedName;
         return this;
     }
-    public DatabaseEntityMapperBuilder setSerializerClassName(String serializerClassName) {
+
+    DatabaseEntityMapperBuilder setSerializerClassName(String serializerClassName) {
         this.serializerClassName = serializerClassName;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setDatabaseEntityClassName(String databaseEntityClassName) {
+    DatabaseEntityMapperBuilder setDatabaseEntityClassName(String databaseEntityClassName) {
         this.databaseEntityClassName = databaseEntityClassName;
         return this;
     }
-    public DatabaseEntityMapperBuilder setPackageName(String packageName) {
+
+    DatabaseEntityMapperBuilder setPackageName(String packageName) {
         this.packageName = packageName;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setCreateTableSql(String createTableSql) {
+    DatabaseEntityMapperBuilder setCreateTableSql(String createTableSql) {
         this.createTableSql = createTableSql;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setTableName(String tableName) {
+    DatabaseEntityMapperBuilder setTableName(String tableName) {
         this.tableName = tableName;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setFieldNames(String[] fieldNames) {
+    DatabaseEntityMapperBuilder setFieldNames(String[] fieldNames) {
         this.fieldNames = fieldNames;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setGetters(List<FieldMethod> getters) {
+    DatabaseEntityMapperBuilder setGetters(List<FieldMethod> getters) {
         this.getters = getters;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setSetters(List<FieldMethod> setters) {
+    DatabaseEntityMapperBuilder setSetters(List<FieldMethod> setters) {
         this.setters = setters;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setItemSql(String itemSql) {
+    DatabaseEntityMapperBuilder setItemSql(String itemSql) {
         this.itemSql = itemSql;
         return this;
     }
 
-    public DatabaseEntityMapperBuilder setItemSqlArguments(String itemSqlArguments) {
+    DatabaseEntityMapperBuilder setItemSqlArguments(List<String> itemSqlArguments) {
         this.itemSqlArguments = itemSqlArguments;
         return this;
     }
 
-    public void build() throws IOException {
+    void build() throws IOException {
         writePackage();
         writeImports();
         writeClass();
@@ -174,12 +176,11 @@ public class DatabaseEntityMapperBuilder {
         writer.write("    @Override\n");
         writer.write("    public List<" + databaseEntityClassName + "> mapList(Cursor cursor) {\n");
         writer.write("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");\n");
-        writer.write("        if(!cursor.moveToFirst()) return new ArrayList<" + databaseEntityClassName + ">();\n");
         writeln();
         writer.write("        List<" + databaseEntityClassName + "> items = new ArrayList<" + databaseEntityClassName + ">();\n");
-        writer.write("        do {;\n");
+        writer.write("        while(cursor.moveToNext()) {\n");
         writer.write("            items.add(mapItem(cursor));\n");
-        writer.write("        } while(cursor.moveToNext());\n");
+        writer.write("        }\n");
         writer.write("        return items;\n");
         writer.write("    }\n");
         writeln();
@@ -192,7 +193,14 @@ public class DatabaseEntityMapperBuilder {
 
         writer.write("    @Override\n");
         writer.write("    public String[] getItemQueryArguments(" + databaseEntityClassName + " item) {\n");
-        writer.write("        return " + itemSqlArguments + ";\n");
+        writer.write("        return new String[]{\n");
+        for (int i = 0; i < itemSqlArguments.size(); i++) {
+            if (i == itemSqlArguments.size() - 1)
+                writer.write("                " + itemSqlArguments.get(i) + "\n");
+            else
+                writer.write("                " + itemSqlArguments.get(i) + ",\n");
+        }
+        writer.write("        };\n");
         writer.write("    }\n");
         writeln();
     }

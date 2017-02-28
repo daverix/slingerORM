@@ -29,20 +29,37 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import static net.daverix.slingerorm.compiler.ListUtils.filter;
-import static net.daverix.slingerorm.compiler.ListUtils.mapItems;
-
 final class ElementUtils {
-    public static final String TYPE_STRING = "java.lang.String";
+    static final String TYPE_STRING = "java.lang.String";
 
-    private ElementUtils(){}
+    private ElementUtils() {
+    }
 
-    public static TypeKind getTypeKind(Element element) {
+    static <T extends Element> List<T> filter(List<T> items, ElementPredicate<T> predicate) throws InvalidElementException {
+        List<T> filtered = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            T item = items.get(i);
+            if (predicate.test(item)) {
+                filtered.add(item);
+            }
+        }
+        return filtered;
+    }
+
+    static <T extends Element, R> List<R> map(List<T> items, ElementFunction<T, R> function) throws InvalidElementException {
+        List<R> mapped = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            mapped.add(function.apply(items.get(i)));
+        }
+        return mapped;
+    }
+
+    static TypeKind getTypeKind(Element element) {
         final TypeMirror fieldType = element.asType();
         return fieldType.getKind();
     }
 
-    public static boolean isAccessible(Element element) {
+    static boolean isAccessible(Element element) {
         Set<Modifier> modifiers = element.getModifiers();
 
         return !modifiers.contains(Modifier.TRANSIENT) &&
@@ -51,19 +68,19 @@ final class ElementUtils {
                 !modifiers.contains(Modifier.PRIVATE);
     }
 
-    public static String getDeclaredTypeName(Element element) throws InvalidElementException {
-        if(element == null) throw new IllegalArgumentException("element is null");
+    static String getDeclaredTypeName(Element element) throws InvalidElementException {
+        if (element == null) throw new IllegalArgumentException("element is null");
         return getTypeElement(element).getQualifiedName().toString();
     }
 
-    public static TypeElement getTypeElement(Element element) throws InvalidElementException {
-        if(element == null) throw new IllegalArgumentException("element is null");
+    static TypeElement getTypeElement(Element element) throws InvalidElementException {
+        if (element == null) throw new IllegalArgumentException("element is null");
 
         TypeKind elementTypeKind = getTypeKind(element);
-        if(elementTypeKind != TypeKind.DECLARED)
+        if (elementTypeKind != TypeKind.DECLARED)
             throw new InvalidElementException("Element is not a declared type: " + elementTypeKind, element);
 
-        if(!(element.asType() instanceof DeclaredType)) {
+        if (!(element.asType() instanceof DeclaredType)) {
             throw new InvalidElementException("mirrorType expected to be DeclaredType but was " + element.asType(), element);
         }
 
@@ -71,46 +88,38 @@ final class ElementUtils {
         return (TypeElement) declaredType.asElement();
     }
 
-    public static List<Element> getElementsInTypeElement(TypeElement entity) {
-        List<Element> elements = new ArrayList<Element>();
-        Set<String> visitedTypes = new HashSet<String>();
+    static List<Element> getElementsInTypeElement(TypeElement entity) {
+        List<Element> elements = new ArrayList<>();
+        Set<String> visitedTypes = new HashSet<>();
         addElements(elements, entity, visitedTypes);
         return elements;
     }
 
     private static void addElements(List<Element> elements, TypeElement entity, Set<String> names) {
-        for(Element element: entity.getEnclosedElements()) {
+        for (Element element : entity.getEnclosedElements()) {
             String name = element.getSimpleName().toString();
-            if(!names.contains(name)) {
+            if (!names.contains(name)) {
                 elements.add(element);
                 names.add(name);
             }
         }
 
         TypeMirror parentMirror = entity.getSuperclass();
-        if(parentMirror.getKind() == TypeKind.DECLARED) {
+        if (parentMirror.getKind() == TypeKind.DECLARED) {
             DeclaredType declaredType = (DeclaredType) parentMirror;
             addElements(elements, (TypeElement) declaredType.asElement(), names);
         }
     }
 
-    public static List<ExecutableElement> getMethodsInTypeElement(TypeElement typeElement) throws InvalidElementException {
-        return mapItems(filter(getElementsInTypeElement(typeElement), new Predicate<Element>() {
-            @Override
-            public boolean test(Element item) {
-                return item.getKind() == ElementKind.METHOD && isAccessible(item);
-            }
-        }), new Function<ExecutableElement, Element>() {
-            @Override
-            public ExecutableElement apply(Element item) {
-                return (ExecutableElement) item;
-            }
-        });
+    static List<ExecutableElement> getMethodsInTypeElement(TypeElement typeElement) throws InvalidElementException {
+        return map(filter(getElementsInTypeElement(typeElement),
+                item -> item.getKind() == ElementKind.METHOD && isAccessible(item)),
+                item -> (ExecutableElement) item);
     }
 
-    public static boolean isString(Element element) {
+    static boolean isString(Element element) {
         TypeKind typeKind = getTypeKind(element);
-        if(typeKind == TypeKind.DECLARED) {
+        if (typeKind == TypeKind.DECLARED) {
             final DeclaredType declaredType = (DeclaredType) element.asType();
             final TypeElement typeElement = (TypeElement) declaredType.asElement();
             final String typeName = typeElement.getQualifiedName().toString();

@@ -16,10 +16,10 @@
 
 package net.daverix.slingerorm.compiler;
 
-public final class StacktraceUtils {
+final class StacktraceUtils {
     private StacktraceUtils() {}
 
-    public static String getStackTraceString(Throwable e) {
+    static String getStackTraceString(Throwable e) {
         return getStackTraceString(e, "");
     }
 

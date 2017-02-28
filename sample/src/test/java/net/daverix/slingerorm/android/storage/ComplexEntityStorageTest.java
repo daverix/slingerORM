@@ -26,16 +26,13 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-import static com.google.common.truth.Truth.assertAbout;
 import static com.google.common.truth.Truth.assertThat;
-import static net.daverix.slingerorm.android.SqliteDatabaseSubject.database;
+import static net.daverix.slingerorm.android.SqliteDatabaseSubject.assertThat;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = BuildConfig.class)
+@Config(constants = BuildConfig.class, manifest = Config.NONE)
 public class ComplexEntityStorageTest {
     private SQLiteDatabase db;
     private ComplexEntityStorage sut;
@@ -43,7 +40,9 @@ public class ComplexEntityStorageTest {
     @Before
     public void setUp() {
         db = SQLiteDatabase.create(null);
-        sut = SlingerComplexEntityStorage.builder().build();
+        sut = SlingerComplexEntityStorage.builder()
+                .database(db)
+                .build();
         sut.createTable();
     }
 
@@ -63,7 +62,7 @@ public class ComplexEntityStorageTest {
             db.endTransaction();
         }
 
-        assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
+        assertThat(db).withTable("Complex").isNotEmpty();
 
         final ComplexEntity actual = sut.getEntity(expectedId);
 
@@ -82,10 +81,10 @@ public class ComplexEntityStorageTest {
         final ComplexEntity entity = createEntity(expectedId, "david", 2, true);
 
         sut.insert(entity);
-        assertAbout(database()).that(db).withTable("Complex").isNotEmpty();
+        assertThat(db).withTable("Complex").isNotEmpty();
 
         sut.delete(entity);
-        assertAbout(database()).that(db).withTable("Complex").isEmpty();
+        assertThat(db).withTable("Complex").isEmpty();
     }
 
     @Test
@@ -133,7 +132,7 @@ public class ComplexEntityStorageTest {
 
         assertThat(actual).isNotNull();
         assertThat(actual).isNotEmpty();
-        assertThat(actual).containsExactlyElementsIn(Arrays.asList(first, second));
+        assertThat(actual).containsExactly(first, second);
     }
 
     @Test
@@ -154,7 +153,7 @@ public class ComplexEntityStorageTest {
 
         assertThat(actual).isNotNull();
         assertThat(actual).isNotEmpty();
-        assertThat(actual).containsExactlyElementsIn(Collections.singletonList(second));
+        assertThat(actual).containsExactly(second);
     }
 
     private ComplexEntity createEntity(long id, String name, double value, boolean complex) {

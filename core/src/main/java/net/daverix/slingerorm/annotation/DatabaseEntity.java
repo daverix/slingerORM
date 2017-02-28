@@ -30,10 +30,10 @@ public @interface DatabaseEntity {
     String name() default "";
 
     /**
-     * Use this property if you can't annotate a field in a superclass
-     * @return the primary key
+     * Use this property if you can't annotate a fields in a superclass
+     * @return a list of primary keys
      */
-    String primaryKeyField() default "";
+    String[] primaryKeyFields() default "";
 
     /**
      * If you have other than native types, you need to set a custom serializer

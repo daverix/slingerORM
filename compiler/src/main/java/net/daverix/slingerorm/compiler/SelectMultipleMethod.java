@@ -21,9 +21,8 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
 
-public class SelectMultipleMethod implements StorageMethod {
+class SelectMultipleMethod implements StorageMethod {
     private final String methodName;
-    private final String entityName;
     private final String returnTypeName;
     private final String parameterText;
     private final String where;
@@ -31,16 +30,14 @@ public class SelectMultipleMethod implements StorageMethod {
     private final String orderBy;
     private final MapperDescription mapperDescription;
 
-    public SelectMultipleMethod(String methodName,
-                                String entityName,
-                                String returnTypeName,
-                                String parameterText,
-                                String where,
-                                Collection<String> whereArgs,
-                                String orderBy,
-                                MapperDescription mapperDescription) {
+    SelectMultipleMethod(String methodName,
+                         String returnTypeName,
+                         String parameterText,
+                         String where,
+                         Collection<String> whereArgs,
+                         String orderBy,
+                         MapperDescription mapperDescription) {
         this.methodName = methodName;
-        this.entityName = entityName;
         this.returnTypeName = returnTypeName;
         this.parameterText = parameterText;
         this.where = where;

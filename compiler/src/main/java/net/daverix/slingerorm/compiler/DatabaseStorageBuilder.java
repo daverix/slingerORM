@@ -20,10 +20,11 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static java.util.stream.Collectors.toSet;
 
 final class DatabaseStorageBuilder {
     private final Writer writer;
@@ -123,28 +124,12 @@ final class DatabaseStorageBuilder {
         writer.write("}\n");
     }
 
-    private String getConstructorParameters(Collection<MapperDescription> descriptions) {
-        List<String> names = new ArrayList<String>();
-        for(MapperDescription description : descriptions) {
-            names.add("Mapper<" + description.getEntityName() + "> " + description.getVariableName());
-        }
-
-        return String.join(", ", names);
-    }
-
     private Collection<MapperDescription> getMapperDescriptions() {
-        Set<MapperDescription> mapperDescriptions = new HashSet<MapperDescription>();
-        for(StorageMethod storageMethod : storageMethods) {
-            mapperDescriptions.add(storageMethod.getMapper());
-        }
-        List<MapperDescription> sortedMapperDescriptions = new ArrayList<MapperDescription>(mapperDescriptions);
-        Collections.sort(sortedMapperDescriptions, new Comparator<MapperDescription>() {
-            @Override
-            public int compare(MapperDescription mapperDescription, MapperDescription t1) {
-                return mapperDescription.getVariableName().compareTo(t1.getVariableName());
-            }
-        });
-        return mapperDescriptions;
+        return storageMethods.stream()
+                .map(StorageMethod::getMapper)
+                .distinct()
+                .sorted((first, second) -> first.getVariableName().compareTo(second.getVariableName()))
+                .collect(toSet());
     }
 
     private void writeMethods() throws IOException {

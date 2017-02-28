@@ -20,20 +20,21 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 class SelectSingleMethod implements StorageMethod {
     private final String methodName;
     private final String returnValue;
     private final String parameters;
     private final String where;
-    private final Collection<String> whereArgs;
+    private final List<String> whereArgs;
     private final MapperDescription mapperDescription;
 
     SelectSingleMethod(String methodName,
                        String returnValue,
                        String parameters,
                        String where,
-                       Collection<String> whereArgs,
+                       List<String> whereArgs,
                        MapperDescription mapperDescription) {
         this.methodName = methodName;
         this.returnValue = returnValue;

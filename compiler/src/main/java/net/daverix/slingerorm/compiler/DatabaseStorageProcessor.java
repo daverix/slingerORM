@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -67,7 +66,6 @@ import javax.tools.JavaFileObject;
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class DatabaseStorageProcessor extends AbstractProcessor {
-    private static final String QUALIFIED_NAME_SQLITE_DATABASE = "android.database.sqlite.SQLiteDatabase";
     private static final List<String> SUPPORTED_RETURN_TYPES_FOR_SELECT = Arrays.asList(
             "java.util.List",
             "java.util.Collection",
@@ -110,23 +108,20 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         List<StorageMethod> methods = getStorageMethods(entity);
 
         JavaFileObject jfo = processingEnv.getFiler().createSourceFile(packageName + "." + storageImplName);
-        BufferedWriter bw = new BufferedWriter(jfo.openWriter());
-        try {
+        try (BufferedWriter bw = new BufferedWriter(jfo.openWriter())) {
             DatabaseStorageBuilder.builder(bw)
                     .setPackage(packageName)
                     .setClassName(storageImplName)
                     .setStorageInterfaceName(entity.getSimpleName().toString())
                     .addMethods(methods)
                     .build();
-        } finally {
-            bw.close();
         }
     }
 
     private List<StorageMethod> getStorageMethods(TypeElement element) throws InvalidElementException {
         if(element == null) throw new IllegalArgumentException("element is null");
 
-        List<StorageMethod> methods = new ArrayList<StorageMethod>();
+        List<StorageMethod> methods = new ArrayList<>();
         for (Element enclosedElement : element.getEnclosedElements()) {
             if (enclosedElement.getKind() == ElementKind.METHOD) {
                 methods.add(createStorageMethod((ExecutableElement) enclosedElement));
@@ -203,7 +198,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
                     sqlArguments, methodSqlParams), methodElement);
         }
 
-        Collection<String> parameterGetters = getWhereArgs(parameters);
+        List<String> parameterGetters = getWhereArgs(parameters);
         String parameterText = getParameterText(parameters);
 
         TypeElement returnTypeElement = (TypeElement) ((DeclaredType) returnType).asElement();
@@ -225,7 +220,6 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
             MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
             return new SelectMultipleMethod(methodElement.getSimpleName().toString(),
-                    returnTypeName,
                     returnTypeElement.getSimpleName() + "<" + returnTypeName + ">",
                     parameterText,
                     where,
@@ -239,8 +233,8 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     }
 
     private List<String> getWhereArgs(List<? extends VariableElement> parameters) {
-        List<String> whereArgs = new ArrayList<String>();
-        for(int i=1;i<parameters.size();i++) {
+        List<String> whereArgs = new ArrayList<>();
+        for(int i=0;i<parameters.size();i++) {
             VariableElement parameter = parameters.get(i);
             if(ElementUtils.isString(parameter)) {
                 whereArgs.add(parameter.getSimpleName().toString());

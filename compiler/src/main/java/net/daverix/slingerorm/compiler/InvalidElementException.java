@@ -21,12 +21,12 @@ import javax.lang.model.element.Element;
 class InvalidElementException extends Exception {
     private final Element element;
 
-    public InvalidElementException(String s, Element element) {
+    InvalidElementException(String s, Element element) {
         super(s);
         this.element = element;
     }
 
-    public Element getElement() {
+    Element getElement() {
         return element;
     }
 }

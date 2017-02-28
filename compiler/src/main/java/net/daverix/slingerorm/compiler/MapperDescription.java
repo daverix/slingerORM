@@ -27,19 +27,19 @@ class MapperDescription {
         this.emptyConstructor = emptyConstructor;
     }
 
-    public String getQualifiedName() {
+    String getQualifiedName() {
         return qualifiedName + "Mapper";
     }
 
-    public String getEntityName() {
+    String getEntityName() {
         return simpleName;
     }
 
-    public boolean hasEmptyConstructor() {
+    boolean hasEmptyConstructor() {
         return emptyConstructor;
     }
 
-    public String getVariableName() {
+    String getVariableName() {
         String firstCharacterLowerCaseName = simpleName.substring(0, 1).toLowerCase() + simpleName.substring(1);
         return firstCharacterLowerCaseName + "Mapper";
     }

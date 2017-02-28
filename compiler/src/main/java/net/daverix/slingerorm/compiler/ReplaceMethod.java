@@ -27,10 +27,10 @@ class ReplaceMethod implements StorageMethod {
     private final String databaseEntityTypeQualifiedName;
     private final MapperDescription mapperDescription;
 
-    public ReplaceMethod(String methodName,
-                         String databaseEntityTypeName,
-                         String databaseEntityTypeQualifiedName,
-                         MapperDescription mapperDescription) {
+    ReplaceMethod(String methodName,
+                  String databaseEntityTypeName,
+                  String databaseEntityTypeQualifiedName,
+                  MapperDescription mapperDescription) {
         this.methodName = methodName;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;

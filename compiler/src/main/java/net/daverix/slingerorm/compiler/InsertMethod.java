@@ -27,10 +27,10 @@ class InsertMethod implements StorageMethod {
     private final String databaseEntityTypeQualifiedName;
     private final MapperDescription mapperDescription;
 
-    public InsertMethod(String methodName,
-                        String databaseEntityTypeName,
-                        String databaseEntityTypeQualifiedName,
-                        MapperDescription mapperDescription) {
+    InsertMethod(String methodName,
+                 String databaseEntityTypeName,
+                 String databaseEntityTypeQualifiedName,
+                 MapperDescription mapperDescription) {
         this.methodName = methodName;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;
