@@ -24,5 +24,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.METHOD})
 public @interface Delete {
-
+    /**
+     * Set the type if you want to delete with an
+     * additional where query.
+     *
+     * @return entity class
+     */
+    Class<?> value() default Object.class;
 }

@@ -304,14 +304,48 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         if(methodElement == null) throw new IllegalArgumentException("methodElement is null");
 
         checkUniqueAnnotations(Delete.class, methodElement);
-        checkFirstParameterMustBeDatabaseEntity(methodElement);
 
-        TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
-        MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
+        Where whereAnnotation = methodElement.getAnnotation(Where.class);
+        if(whereAnnotation == null) {
+            checkFirstParameterMustBeDatabaseEntity(methodElement);
 
-        return new DeleteMethod(methodElement.getSimpleName().toString(),
+            TypeElement databaseEntityElement = getDatabaseEntityElementFromFirstParameter(methodElement);
+            MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
+
+            return new DeleteMethod(methodElement.getSimpleName().toString(),
+                    databaseEntityElement.getSimpleName().toString(),
+                    databaseEntityElement.getQualifiedName().toString(),
+                    mapperDescription);
+        }
+
+        Delete delete = methodElement.getAnnotation(Delete.class);
+        TypeElement databaseEntityElement = getDatabaseEntityFromDelete(delete);
+        if("java.lang.Object".equals(databaseEntityElement.getQualifiedName().toString()))
+            throw new InvalidElementException("Where together with Delete requires the type to delete to be set in Delete annotation", methodElement);
+
+        MapperDescription mapperDescription = new MapperDescription(databaseEntityElement.getQualifiedName().toString(),
                 databaseEntityElement.getSimpleName().toString(),
-                databaseEntityElement.getQualifiedName().toString(),
+                true);
+
+        String where = whereAnnotation.value();
+        int sqlArguments = getSqliteArgumentCount(where);
+
+        List<? extends VariableElement> parameters = methodElement.getParameters();
+
+        int methodSqlParams = parameters.size();
+        if(sqlArguments != methodSqlParams) {
+            throw new InvalidElementException(String.format(Locale.ENGLISH,
+                    "the sql where argument has %d arguments, the method contains %d",
+                    sqlArguments, methodSqlParams), methodElement);
+        }
+
+        List<String> parameterGetters = getWhereArgs(parameters);
+        String parameterText = getParameterText(parameters);
+
+        return new DeleteWhereMethod(methodElement.getSimpleName().toString(),
+                parameterText,
+                where,
+                parameterGetters,
                 mapperDescription);
     }
 
@@ -435,8 +469,19 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         return methodElement.getAnnotation(annotationClass) != null;
     }
 
+    private TypeElement getDatabaseEntityFromDelete(Delete delete) {
+        if(delete == null) throw new IllegalArgumentException("delete is null");
+
+        try {
+            delete.value();
+            throw new IllegalStateException("should never reach this line (this is a hack)");
+        } catch (MirroredTypeException mte) {
+            return typeElementConverter.asTypeElement(mte.getTypeMirror());
+        }
+    }
+
     private TypeElement getSerializerType(DatabaseEntity databaseEntity) {
-        if(databaseEntity == null) throw new IllegalArgumentException("createTable is null");
+        if(databaseEntity == null) throw new IllegalArgumentException("databaseEntity is null");
 
         try {
             databaseEntity.serializer();
