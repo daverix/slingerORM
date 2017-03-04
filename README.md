@@ -209,7 +209,7 @@ in the storage class:
         .build();
     ...
 
-Here is some of the annotations that can be used on the methods in your storage interface:
+Here are some of the annotations that can be used on the methods in your storage interface:
 
     @DatabaseStorage
     public interface ExampleEntityStorage {
@@ -244,7 +244,7 @@ Here is some of the annotations that can be used on the methods in your storage 
 
         // @OrderBy and @Limit can be set on the method to add additional data to the sql query
         @Select @OrderBy("created DESC") @Limit(5)
-        List<ExampleEntity> getLatest(SQLiteDatabase db);
+        List<ExampleEntity> getLatest();
     }
 
 Using a custom serializer
@@ -264,7 +264,7 @@ the Serializer interface and add "@SerializeTo" to the field that needs to be se
 
     public class ExampleDateSerilizer implements Serializer<Date,Long> {
         @Override
-        public long serialize(Date date) {
+        public Long serialize(Date date) {
             return date != null ? date.getTime() : 0;
         }
         
