@@ -24,7 +24,7 @@ public class NativeFieldsMapperTest {
 
     @Before
     public void before() {
-        sut = new NativeFieldsEntityMapper();
+        sut = NativeFieldsEntityMapper.create();
     }
 
     @Test

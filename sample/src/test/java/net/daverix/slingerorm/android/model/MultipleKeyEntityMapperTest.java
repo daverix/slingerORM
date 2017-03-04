@@ -22,7 +22,7 @@ public class MultipleKeyEntityMapperTest {
 
     @Before
     public void setUp() {
-        sut = new MultipleKeyEntityMapper();
+        sut = MultipleKeyEntityMapper.create();
     }
 
     @Test

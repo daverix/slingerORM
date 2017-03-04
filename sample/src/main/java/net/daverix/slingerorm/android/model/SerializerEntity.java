@@ -1,15 +1,17 @@
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.android.serialization.TestSerializer;
+import net.daverix.slingerorm.SerializeType;
 import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.PrimaryKey;
+import net.daverix.slingerorm.annotation.SerializeTo;
 
 import java.util.Date;
 
-@DatabaseEntity(serializer = TestSerializer.class)
+@DatabaseEntity
 public class SerializerEntity {
     @PrimaryKey
     private long id;
+    @SerializeTo(SerializeType.LONG)
     private Date created;
 
     public long getId() {

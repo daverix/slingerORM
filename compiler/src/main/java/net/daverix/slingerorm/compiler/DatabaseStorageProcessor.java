@@ -151,13 +151,9 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
     }
 
     private MapperDescription getMapperDescription(TypeElement databaseEntity) throws InvalidElementException {
-        DatabaseEntity entityAnnotation = databaseEntity.getAnnotation(DatabaseEntity.class);
-        TypeElement serializerType = getSerializerType(entityAnnotation);
-        boolean emptyConstructor = Object.class.getCanonicalName().equals(serializerType.getQualifiedName().toString());
-
         return new MapperDescription(databaseEntity.getQualifiedName().toString(),
                 databaseEntity.getSimpleName().toString(),
-                emptyConstructor);
+                mapperHasDependencies(databaseEntity));
     }
 
     private StorageMethod createCreateTableMethod(ExecutableElement methodElement) throws InvalidElementException {
@@ -332,7 +328,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         MapperDescription mapperDescription = new MapperDescription(databaseEntityElement.getQualifiedName().toString(),
                 databaseEntityElement.getSimpleName().toString(),
-                true);
+                mapperHasDependencies(databaseEntityElement));
 
         String where = whereAnnotation.value();
         int sqlArguments = getSqliteArgumentCount(where);
@@ -355,6 +351,13 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
                 where,
                 parameterGetters,
                 mapperDescription);
+    }
+
+    private boolean mapperHasDependencies(TypeElement databaseEntityElement) throws InvalidElementException {
+        TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(databaseEntityElement.getQualifiedName() + "Mapper.Builder");
+        return typeElement != null && ElementUtils.getMethodsInTypeElement(typeElement)
+                .stream()
+                .anyMatch(method -> "create".equals(method.getSimpleName().toString()));
     }
 
     private StorageMethod createUpdateMethod(ExecutableElement methodElement) throws InvalidElementException {
@@ -482,17 +485,6 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         try {
             delete.value();
-            throw new IllegalStateException("should never reach this line (this is a hack)");
-        } catch (MirroredTypeException mte) {
-            return typeElementConverter.asTypeElement(mte.getTypeMirror());
-        }
-    }
-
-    private TypeElement getSerializerType(DatabaseEntity databaseEntity) {
-        if(databaseEntity == null) throw new IllegalArgumentException("databaseEntity is null");
-
-        try {
-            databaseEntity.serializer();
             throw new IllegalStateException("should never reach this line (this is a hack)");
         } catch (MirroredTypeException mte) {
             return typeElementConverter.asTypeElement(mte.getTypeMirror());

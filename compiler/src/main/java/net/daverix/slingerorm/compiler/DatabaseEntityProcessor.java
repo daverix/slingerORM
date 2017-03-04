@@ -87,18 +87,13 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
         List<FieldMethod> getters = model.getGetters();
         String deleteSql = model.getItemSql();
         List<String> itemSqlArgs = model.getItemSqlArgs();
-
-        TypeElement serializerElement = model.getSerializerElement();
-        String serializerQualifiedName = serializerElement.getQualifiedName().toString();
-        String serializerSimpleName = serializerElement.getSimpleName().toString();
+        List<SerializerType> serializers = model.getSerializers();
 
         JavaFileObject jfo = processingEnv.getFiler().createSourceFile(packageName + "." + mapperName);
         try (BufferedWriter bw = new BufferedWriter(jfo.openWriter())) {
             DatabaseEntityMapperBuilder.builder(bw)
                     .setDatabaseEntityClassName(entity.getSimpleName().toString())
                     .setPackageName(packageName)
-                    .setSerializerClassName(serializerSimpleName)
-                    .setSerializerQualifiedName(serializerQualifiedName)
                     .setTableName(model.getTableName())
                     .setCreateTableSql(createTableSql)
                     .setFieldNames(model.getFieldNames())
@@ -106,6 +101,7 @@ public class DatabaseEntityProcessor extends AbstractProcessor {
                     .setGetters(getters)
                     .setItemSql(deleteSql)
                     .setItemSqlArguments(itemSqlArgs)
+                    .setSerializers(serializers)
                     .build();
         }
     }

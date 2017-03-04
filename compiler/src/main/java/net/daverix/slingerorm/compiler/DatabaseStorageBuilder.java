@@ -207,8 +207,8 @@ final class DatabaseStorageBuilder {
 
         for(MapperDescription description : mapperDescriptions) {
             writer.write("            if (" + description.getVariableName() + " == null)\n");
-            if(description.hasEmptyConstructor()) {
-                writer.write("                " + description.getVariableName() + " = new " + description.getEntityName() + "Mapper();\n");
+            if(!description.hasDependencies()) {
+                writer.write("                " + description.getVariableName() + " = " + description.getEntityName() + "Mapper.create();\n");
             }
             else {
                 writer.write("                throw new IllegalStateException(\"" + description.getVariableName() + " must be set using " + description.getVariableName() + "()\");\n");

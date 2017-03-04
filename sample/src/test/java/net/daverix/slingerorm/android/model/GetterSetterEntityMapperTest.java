@@ -24,7 +24,7 @@ public class GetterSetterEntityMapperTest {
 
     @Before
     public void before() {
-        sut = new GetterSetterEntityMapper();
+        sut = GetterSetterEntityMapper.create();
     }
 
     @Test

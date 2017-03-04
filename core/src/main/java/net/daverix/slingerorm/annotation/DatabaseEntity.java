@@ -34,10 +34,4 @@ public @interface DatabaseEntity {
      * @return a list of primary keys
      */
     String[] primaryKeyFields() default "";
-
-    /**
-     * If you have other than native types, you need to set a custom serializer
-     * @return a class with methods annotated with either {@link DeserializeType} or {@link SerializeType}.
-     */
-    Class<?> serializer() default Object.class;
 }

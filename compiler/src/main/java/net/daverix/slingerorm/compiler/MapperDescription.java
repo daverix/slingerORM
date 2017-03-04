@@ -17,14 +17,14 @@
 package net.daverix.slingerorm.compiler;
 
 class MapperDescription {
-    private String qualifiedName;
-    private String simpleName;
-    private boolean emptyConstructor;
+    private final String qualifiedName;
+    private final String simpleName;
+    private final boolean hasDependencies;
 
-    MapperDescription(String qualifiedName, String simpleName, boolean emptyConstructor) {
+    MapperDescription(String qualifiedName, String simpleName, boolean hasDependencies) {
         this.qualifiedName = qualifiedName;
         this.simpleName = simpleName;
-        this.emptyConstructor = emptyConstructor;
+        this.hasDependencies = hasDependencies;
     }
 
     String getQualifiedName() {
@@ -35,8 +35,8 @@ class MapperDescription {
         return simpleName;
     }
 
-    boolean hasEmptyConstructor() {
-        return emptyConstructor;
+    boolean hasDependencies() {
+        return hasDependencies;
     }
 
     String getVariableName() {

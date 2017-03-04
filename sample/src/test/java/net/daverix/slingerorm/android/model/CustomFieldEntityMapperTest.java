@@ -24,7 +24,7 @@ public class CustomFieldEntityMapperTest {
 
     @Before
     public void before() {
-        sut = new CustomFieldEntityMapper();
+        sut = CustomFieldEntityMapper.create();
     }
 
     @Test

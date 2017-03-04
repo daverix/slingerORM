@@ -4,7 +4,7 @@ import android.content.ContentValues;
 import android.database.MatrixCursor;
 
 import net.daverix.slingerorm.android.Mapper;
-import net.daverix.slingerorm.android.serialization.TestSerializer;
+import net.daverix.slingerorm.android.serialization.DateSerializer;
 import net.daverix.slingerorm.core.android.BuildConfig;
 
 import org.junit.Before;
@@ -24,7 +24,9 @@ public class SerializerEntityMapperTest {
 
     @Before
     public void before() {
-        sut = new SerializerEntityMapper(new TestSerializer());
+        sut = SerializerEntityMapper.builder()
+                .dateToLongSerializer(new DateSerializer())
+                .build();
     }
 
     @Test
