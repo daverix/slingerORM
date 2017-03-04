@@ -305,6 +305,12 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         checkUniqueAnnotations(Delete.class, methodElement);
 
+        TypeKind returnTypeKind = methodElement.getReturnType().getKind();
+        if(returnTypeKind != TypeKind.INT && returnTypeKind != TypeKind.VOID)
+            throw new InvalidElementException("Only int and void are supported as return types for Delete annotated methods", methodElement);
+
+        boolean returnDeleted = returnTypeKind == TypeKind.INT;
+
         Where whereAnnotation = methodElement.getAnnotation(Where.class);
         if(whereAnnotation == null) {
             checkFirstParameterMustBeDatabaseEntity(methodElement);
@@ -313,6 +319,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
             MapperDescription mapperDescription = getMapperDescription(databaseEntityElement);
 
             return new DeleteMethod(methodElement.getSimpleName().toString(),
+                    returnDeleted,
                     databaseEntityElement.getSimpleName().toString(),
                     databaseEntityElement.getQualifiedName().toString(),
                     mapperDescription);
@@ -343,6 +350,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
         String parameterText = getParameterText(parameters);
 
         return new DeleteWhereMethod(methodElement.getSimpleName().toString(),
+                returnDeleted,
                 parameterText,
                 where,
                 parameterGetters,

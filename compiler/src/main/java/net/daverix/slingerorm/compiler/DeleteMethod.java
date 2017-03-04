@@ -23,15 +23,18 @@ import java.util.Collections;
 
 class DeleteMethod implements StorageMethod {
     private final String methodName;
+    private final boolean returnDeleted;
     private final String databaseEntityTypeName;
     private final String databaseEntityTypeQualifiedName;
     private final MapperDescription mapperDescription;
 
     DeleteMethod(String methodName,
+                 boolean returnDeleted,
                  String databaseEntityTypeName,
                  String databaseEntityTypeQualifiedName,
                  MapperDescription mapperDescription) {
         this.methodName = methodName;
+        this.returnDeleted = returnDeleted;
         this.databaseEntityTypeName = databaseEntityTypeName;
         this.databaseEntityTypeQualifiedName = databaseEntityTypeQualifiedName;
         this.mapperDescription = mapperDescription;
@@ -41,12 +44,14 @@ class DeleteMethod implements StorageMethod {
     public void write(Writer writer) throws IOException {
         if(writer == null) throw new IllegalArgumentException("writer is null");
 
+        String returnType = returnDeleted ? "int" : "void";
+
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(" + databaseEntityTypeName + " item) {\n");
+        writer.write("    public " + returnType + " " + methodName + "(" + databaseEntityTypeName + " item) {\n");
         writer.write("        if (item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writer.write("\n");
 
-        writer.write("        db.delete(" + mapperDescription.getVariableName() + ".getTableName(),\n");
+        writer.write("        " + (returnDeleted ? "return " : "") +  "db.delete(" + mapperDescription.getVariableName() + ".getTableName(),\n");
         writer.write("                " + mapperDescription.getVariableName() + ".getItemQuery(),\n");
         writer.write("                " + mapperDescription.getVariableName() + ".getItemQueryArguments(item));\n");
         writer.write("    }\n");

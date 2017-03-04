@@ -23,17 +23,20 @@ import java.util.Collections;
 
 class DeleteWhereMethod implements StorageMethod {
     private final String methodName;
+    private final boolean returnDeleted;
     private final String parameterText;
     private final String where;
     private final Collection<String> whereArgs;
     private final MapperDescription mapperDescription;
 
     DeleteWhereMethod(String methodName,
+                      boolean returnDeleted,
                       String parameterText,
                       String where,
                       Collection<String> whereArgs,
                       MapperDescription mapperDescription) {
         this.methodName = methodName;
+        this.returnDeleted = returnDeleted;
         this.parameterText = parameterText;
         this.where = where;
         this.whereArgs = whereArgs;
@@ -47,12 +50,12 @@ class DeleteWhereMethod implements StorageMethod {
 
         String where = getWhere();
         String args = createArguments();
+        String returnType = returnDeleted ? "int" : "void";
 
         //TODO: check for null in parameters?
-
         writer.write("    @Override\n");
-        writer.write("    public void " + methodName + "(" + parameterText + ") {\n");
-        writer.write("        db.delete(" + mapperDescription.getVariableName() + ".getTableName(),\n");
+        writer.write("    public " + returnType + " " + methodName + "(" + parameterText + ") {\n");
+        writer.write("        " + (returnDeleted ? "return " : "") +  "db.delete(" + mapperDescription.getVariableName() + ".getTableName(),\n");
         writer.write("                " + where + ",\n");
         writer.write("                " + args + ");\n");
         writer.write("    }\n");
