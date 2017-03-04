@@ -27,14 +27,19 @@ import net.daverix.slingerorm.annotation.SetField;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
@@ -43,6 +48,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static net.daverix.slingerorm.compiler.ElementUtils.filter;
 import static net.daverix.slingerorm.compiler.ElementUtils.getElementsInTypeElement;
 import static net.daverix.slingerorm.compiler.ElementUtils.getMethodsInTypeElement;
@@ -123,20 +129,35 @@ class DatabaseEntityModel {
 
         StringBuilder builder = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(getTableName()).append("(");
 
-        DatabaseEntity entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
-        String[] primaryKeys = entityAnnotation.primaryKeyFields();
+        Map<String, String> dbFieldNames = new HashMap<>();
+        Map<String, String> fieldTypes = new HashMap<>();
+        for (int i = 0; i < fields.size(); i++) {
+            Element field = fields.get(i);
+            String simpleName = field.getSimpleName().toString();
+            dbFieldNames.put(simpleName, getDatabaseFieldName(field));
+            fieldTypes.put(simpleName, getDatabaseType(field));
+        }
 
-        boolean primaryKeySet = false;
+        Set<String> primaryKeysCollection = getPrimaryKeyFieldNames();
 
+        if (primaryKeysCollection.isEmpty())
+            throw new InvalidElementException("Primary key not found when creating SQL for entity " + databaseTypeElement.getSimpleName(), databaseTypeElement);
+
+        final int primaryKeysCollectionSize = primaryKeysCollection.size();
         for (int i = 0; i < fields.size(); i++) {
             final Element field = fields.get(i);
-            final String fieldName = getDatabaseFieldName(field);
-            final String fieldType = getDatabaseType(field);
-            builder.append(fieldName).append(" ").append(fieldType);
-            PrimaryKey annotation = field.getAnnotation(PrimaryKey.class);
-            if (annotation != null || containsValue(primaryKeys, field.getSimpleName().toString())) {
+            String fieldName = field.getSimpleName().toString();
+
+            builder.append(dbFieldNames.get(fieldName))
+                    .append(" ")
+                    .append(fieldTypes.get(fieldName));
+
+            boolean containsFieldName = primaryKeysCollection.contains(fieldName);
+
+            if (primaryKeysCollectionSize == 1 && containsFieldName) {
                 builder.append(" NOT NULL PRIMARY KEY");
-                primaryKeySet = true;
+            } else if (containsFieldName) {
+                builder.append(" NOT NULL");
             }
 
             if (i < fields.size() - 1) {
@@ -144,20 +165,38 @@ class DatabaseEntityModel {
             }
         }
 
-        if (!primaryKeySet)
-            throw new InvalidElementException("Primary key not found when creating SQL for entity " + databaseTypeElement.getSimpleName(), databaseTypeElement);
+        if (primaryKeysCollectionSize > 1) {
+            List<String> dbNames = primaryKeysCollection.stream()
+                    .map(dbFieldNames::get)
+                    .collect(Collectors.toList());
+
+            builder.append(", PRIMARY KEY(")
+                    .append(String.join(",", dbNames))
+                    .append(")");
+        }
 
         builder.append(")");
 
         return builder.toString();
     }
 
-    private boolean containsValue(String[] values, String value) {
-        for (String valuesItem : values) {
-            if (value.equals(valuesItem))
-                return true;
+    private Set<String> getPrimaryKeyFieldNames() throws InvalidElementException {
+        DatabaseEntity entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity.class);
+        String[] primaryKeys = entityAnnotation.primaryKeyFields();
+        Set<String> annotationKeys = Arrays.stream(primaryKeys)
+                .filter(x -> !x.isEmpty())
+                .collect(toSet());
+
+        if (annotationKeys.size() > 0) {
+            return annotationKeys;
+        } else {
+            return getPrimaryKeyFields()
+                    .stream()
+                    .map(Element::getSimpleName)
+                    .map(Name::toString)
+                    .filter(x -> !x.isEmpty())
+                    .collect(toSet());
         }
-        return false;
     }
 
     private List<String> getPrimaryKeyDbNames() throws InvalidElementException {
