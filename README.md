@@ -192,7 +192,7 @@ Using the mapper standalone
 It's possible to use the database entity mapper and then do the quering etc yourself. You get an
 implementation of the Mapper interface by suffixing the database entity name with "Mapper":
 
-    Mapper<ExampleEntity> exampleEntityMapper = new ExampleEntityMapper();
+    Mapper<ExampleEntity> exampleEntityMapper = ExampleEntityMapper.create();
     ...
 
 Configuring the storage class
@@ -203,8 +203,8 @@ The number of mappers used for a storage depends on how many different database 
 in the storage class:
 
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(new ExampleEntityMapper())
-        .otherExampleMapper(new OtherExampleMapper())
+        .exampleEntityMapper(ExampleEntityMapper.create())
+        .otherExampleMapper(OtherExampleMapper.create())
         .database(db)
         .build();
     ...
@@ -251,34 +251,38 @@ Using a custom serializer
 -------------------------
 
 Sometimes some type of fields in the database entity will not be a native data type that SlingerORM
-supports. You will then need to implement your custom serializer. Create a class and add
-"@SerializeType" and "@DeserializeType" annotations to the methods. Deserialize methods will be
-called when getting data from the database and serialize methods will be called when inserting data:
+supports. You will then need to implement your custom serializer. Create a class that implements 
+the Serializer interface and add "@SerializeTo" to the field that needs to be serialized.
 
-    public class MyCustomSerializer {
-        @DeserializeType
-        public Date deserializeDate(long time) {
+    @DatabaseEntity
+    public class ExampleEntity {
+        @SerializeTo(SerializeType.LONG)
+        private Date created;
+        
+        // ...
+    }
+
+    public class ExampleDateSerilizer implements Serializer<Date,Long> {
+        @Override
+        public long serialize(Date date) {
+            return date != null ? date.getTime() : 0;
+        }
+        
+        @Override
+        public Date deserialize(long time) {
             return new Date(time);
         }
-
-        @SerializeType
-        public long serializeDate(Date date) {
-            return date.getTime();
-        }
     }
 
-To tell SlingerORM which serializer to use for which entity, set the "serializer" field in
-DatabaseEntity annotation:
+To tell SlingerORM which serializer to use, set the serializer in the builder:
 
-    @DatabaseEntity(serializer = MyCustomSerializer.class)
-    public class ExampleEntity {
-        ...
-    }
+    Mapper<ExampleEntity> mapper = ExampleEntityMapper.builder()
+        .dateToLongSerializer(new MyDateSerializer())
+        .build();
+    
 
-The storage class will then require you to pass in the mapper because it doesn't have an empty
-constructor anymore:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper(new MyCustomSerializer());
+The storage class will then require you to pass in the mapper because it now doesn't know about 
+the mappers dependencies:
 
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
         .exampleEntityMapper(mapper)
@@ -291,7 +295,6 @@ The project is currently in an alpha stage. Will upload it to Maven Central even
 meantime you have to call the following code to create a local repository:
 
     ./gradlew build uploadArchives
-
 
 You could change the build script so the build is placed in your local maven repository, right now
 it's placed in the pkg/ folder in the root of the project.
