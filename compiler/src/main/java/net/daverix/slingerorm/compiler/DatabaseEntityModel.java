@@ -270,7 +270,7 @@ class DatabaseEntityModel {
                 } else {
                     SerializeTo annotation = field.getAnnotation(SerializeTo.class);
                     if (annotation == null) {
-                        throw new InvalidElementException(typeName + " is not a type that SlingerORM understands, please add @SerializeTo and till it what to serialize to.", field);
+                        throw new InvalidElementException(typeName + " is not a type that SlingerORM understands, please add @SerializeTo and tell it what to serialize to.", field);
                     }
 
                     return getDatabaseType(annotation.value());
