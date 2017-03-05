@@ -17,16 +17,16 @@
 package net.daverix.slingerorm.android.storage;
 
 import net.daverix.slingerorm.android.model.ComplexEntity;
-import net.daverix.slingerorm.annotation.CreateTable;
-import net.daverix.slingerorm.annotation.Delete;
-import net.daverix.slingerorm.annotation.Insert;
-import net.daverix.slingerorm.annotation.Limit;
-import net.daverix.slingerorm.annotation.OrderBy;
-import net.daverix.slingerorm.annotation.Replace;
-import net.daverix.slingerorm.annotation.Select;
-import net.daverix.slingerorm.annotation.DatabaseStorage;
-import net.daverix.slingerorm.annotation.Update;
-import net.daverix.slingerorm.annotation.Where;
+import net.daverix.slingerorm.storage.CreateTable;
+import net.daverix.slingerorm.storage.Delete;
+import net.daverix.slingerorm.storage.Insert;
+import net.daverix.slingerorm.storage.Limit;
+import net.daverix.slingerorm.storage.OrderBy;
+import net.daverix.slingerorm.storage.Replace;
+import net.daverix.slingerorm.storage.Select;
+import net.daverix.slingerorm.storage.DatabaseStorage;
+import net.daverix.slingerorm.storage.Update;
+import net.daverix.slingerorm.storage.Where;
 
 import java.util.List;
 

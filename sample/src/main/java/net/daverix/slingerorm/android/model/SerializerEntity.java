@@ -1,9 +1,9 @@
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.SerializeType;
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.PrimaryKey;
-import net.daverix.slingerorm.annotation.SerializeTo;
+import net.daverix.slingerorm.serializer.SerializeType;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.entity.PrimaryKey;
+import net.daverix.slingerorm.entity.SerializeTo;
 
 import java.util.Date;
 

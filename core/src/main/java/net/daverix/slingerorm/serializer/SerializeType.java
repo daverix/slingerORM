@@ -1,4 +1,4 @@
-package net.daverix.slingerorm;
+package net.daverix.slingerorm.serializer;
 
 public enum SerializeType {
     SHORT,

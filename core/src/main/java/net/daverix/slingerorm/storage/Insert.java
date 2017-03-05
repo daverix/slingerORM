@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.annotation;
+package net.daverix.slingerorm.storage;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -23,12 +23,5 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.METHOD})
-public @interface Delete {
-    /**
-     * Set the type if you want to delete with an
-     * additional where query.
-     *
-     * @return entity class
-     */
-    Class<?> value() default Object.class;
+public @interface Insert {
 }

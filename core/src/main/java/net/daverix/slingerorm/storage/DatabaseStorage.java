@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.annotation;
+package net.daverix.slingerorm.storage;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

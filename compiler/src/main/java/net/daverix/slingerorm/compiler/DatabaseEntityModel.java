@@ -16,14 +16,14 @@
 
 package net.daverix.slingerorm.compiler;
 
-import net.daverix.slingerorm.SerializeType;
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.FieldName;
-import net.daverix.slingerorm.annotation.GetField;
-import net.daverix.slingerorm.annotation.NotDatabaseField;
-import net.daverix.slingerorm.annotation.PrimaryKey;
-import net.daverix.slingerorm.annotation.SerializeTo;
-import net.daverix.slingerorm.annotation.SetField;
+import net.daverix.slingerorm.serializer.SerializeType;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.entity.FieldName;
+import net.daverix.slingerorm.entity.GetField;
+import net.daverix.slingerorm.entity.NotDatabaseField;
+import net.daverix.slingerorm.entity.PrimaryKey;
+import net.daverix.slingerorm.entity.SerializeTo;
+import net.daverix.slingerorm.entity.SetField;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -644,7 +644,7 @@ class DatabaseEntityModel {
 
     private List<String> getImports(Element field) {
         List<String> imports = new ArrayList<>();
-        imports.add("net.daverix.slingerorm.Serializer");
+        imports.add("net.daverix.slingerorm.serializer.Serializer");
 
         final TypeKind typeKind = ElementUtils.getTypeKind(field);
         if(typeKind == TypeKind.DECLARED) {

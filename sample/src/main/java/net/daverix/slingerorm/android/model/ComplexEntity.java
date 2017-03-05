@@ -15,7 +15,11 @@
  */
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.annotation.*;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.entity.FieldName;
+import net.daverix.slingerorm.entity.GetField;
+import net.daverix.slingerorm.entity.NotDatabaseField;
+import net.daverix.slingerorm.entity.SetField;
 
 @DatabaseEntity(name = "Complex", primaryKeyFields = "_id")
 public class ComplexEntity extends AbstractComplexEntity {

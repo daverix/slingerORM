@@ -1,7 +1,7 @@
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.PrimaryKey;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.entity.PrimaryKey;
 
 @DatabaseEntity
 public class MultipleKeyEntity {

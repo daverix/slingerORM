@@ -13,25 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.annotation;
+
+package net.daverix.slingerorm.storage;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Mark a class as an entity that can be mapped to a database table. The optional value is used for
- * the table name.
- */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
-public @interface DatabaseEntity {
-    String name() default "";
-
-    /**
-     * Use this property if you can't annotate a fields in a superclass
-     * @return a list of primary keys
-     */
-    String[] primaryKeyFields() default "";
+@Target({ElementType.METHOD})
+public @interface CreateTable {
+    Class<?> value();
 }

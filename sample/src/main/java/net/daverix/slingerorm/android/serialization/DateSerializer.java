@@ -1,7 +1,7 @@
 package net.daverix.slingerorm.android.serialization;
 
 
-import net.daverix.slingerorm.Serializer;
+import net.daverix.slingerorm.serializer.Serializer;
 
 import java.util.Date;
 

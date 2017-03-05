@@ -17,17 +17,17 @@ package net.daverix.slingerorm.compiler;
 
 import com.google.auto.service.AutoService;
 
-import net.daverix.slingerorm.annotation.CreateTable;
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.DatabaseStorage;
-import net.daverix.slingerorm.annotation.Delete;
-import net.daverix.slingerorm.annotation.Insert;
-import net.daverix.slingerorm.annotation.Limit;
-import net.daverix.slingerorm.annotation.OrderBy;
-import net.daverix.slingerorm.annotation.Replace;
-import net.daverix.slingerorm.annotation.Select;
-import net.daverix.slingerorm.annotation.Update;
-import net.daverix.slingerorm.annotation.Where;
+import net.daverix.slingerorm.storage.CreateTable;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.storage.DatabaseStorage;
+import net.daverix.slingerorm.storage.Delete;
+import net.daverix.slingerorm.storage.Insert;
+import net.daverix.slingerorm.storage.Limit;
+import net.daverix.slingerorm.storage.OrderBy;
+import net.daverix.slingerorm.storage.Replace;
+import net.daverix.slingerorm.storage.Select;
+import net.daverix.slingerorm.storage.Update;
+import net.daverix.slingerorm.storage.Where;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -63,7 +63,7 @@ import javax.tools.JavaFileObject;
  */
 @AutoService(Processor.class)
 @SupportedAnnotationTypes({
-        "net.daverix.slingerorm.annotation.DatabaseStorage"
+        "net.daverix.slingerorm.storage.DatabaseStorage"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class DatabaseStorageProcessor extends AbstractProcessor {

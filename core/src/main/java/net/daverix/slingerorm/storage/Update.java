@@ -13,18 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.annotation;
+
+package net.daverix.slingerorm.storage;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Use this to mark a field as a primary key
- */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.FIELD})
-public @interface PrimaryKey {
+@Target({ElementType.METHOD})
+public @interface Update {
 
 }

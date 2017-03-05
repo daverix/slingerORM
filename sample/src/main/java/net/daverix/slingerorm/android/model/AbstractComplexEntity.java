@@ -15,10 +15,10 @@
  */
 package net.daverix.slingerorm.android.model;
 
-import net.daverix.slingerorm.annotation.DatabaseEntity;
-import net.daverix.slingerorm.annotation.FieldName;
-import net.daverix.slingerorm.annotation.GetField;
-import net.daverix.slingerorm.annotation.SetField;
+import net.daverix.slingerorm.entity.DatabaseEntity;
+import net.daverix.slingerorm.entity.FieldName;
+import net.daverix.slingerorm.entity.GetField;
+import net.daverix.slingerorm.entity.SetField;
 
 @DatabaseEntity
 public abstract class AbstractComplexEntity {
