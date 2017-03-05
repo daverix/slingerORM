@@ -37,27 +37,27 @@ final class DatabaseStorageBuilder {
         this.writer = writer;
     }
 
-    public static DatabaseStorageBuilder builder(Writer writer) {
+    static DatabaseStorageBuilder builder(Writer writer) {
         if (writer == null) throw new IllegalArgumentException("writer is null");
 
         return new DatabaseStorageBuilder(writer);
     }
 
-    public DatabaseStorageBuilder setPackage(String packageName) {
+    DatabaseStorageBuilder setPackage(String packageName) {
         if (packageName == null) throw new IllegalArgumentException("qualifiedName is null");
 
         this.packageName = packageName;
         return this;
     }
 
-    public DatabaseStorageBuilder setClassName(String className) {
+    DatabaseStorageBuilder setClassName(String className) {
         if (className == null) throw new IllegalArgumentException("className is null");
 
         this.className = className;
         return this;
     }
 
-    public DatabaseStorageBuilder setStorageInterfaceName(String storageInterfaceName) {
+    DatabaseStorageBuilder setStorageInterfaceName(String storageInterfaceName) {
         if (storageInterfaceName == null)
             throw new IllegalArgumentException("storageInterfaceName is null");
 
@@ -65,7 +65,7 @@ final class DatabaseStorageBuilder {
         return this;
     }
 
-    public DatabaseStorageBuilder addMethods(Iterable<StorageMethod> storageMethods) throws IOException {
+    DatabaseStorageBuilder addMethods(Iterable<StorageMethod> storageMethods) throws IOException {
         if(storageMethods == null) throw new IllegalArgumentException("storageMethods is null");
 
         for(StorageMethod method : storageMethods) {
@@ -74,14 +74,14 @@ final class DatabaseStorageBuilder {
         return this;
     }
 
-    public DatabaseStorageBuilder addMethod(StorageMethod storageMethod) throws IOException {
+    private DatabaseStorageBuilder addMethod(StorageMethod storageMethod) throws IOException {
         if(storageMethod == null) throw new IllegalArgumentException("storageMethod is null");
 
         storageMethods.add(storageMethod);
         return this;
     }
 
-    public void build() throws IOException {
+    void build() throws IOException {
         if (packageName == null)
             throw new IllegalStateException("qualifiedName must be set");
         if (className == null)
@@ -98,7 +98,7 @@ final class DatabaseStorageBuilder {
 
     private void writeClass(Collection<MapperDescription> mapperDescriptions) throws IOException {
         writer.write("public class " + className + " implements " + storageInterfaceName + " {\n");
-        writer.write("    private final SQLiteDatabase db;\n");
+        writer.write("    private final Database db;\n");
         for(MapperDescription description : mapperDescriptions) {
             writer.write("    private final Mapper<" + description.getEntityName() + "> " + description.getVariableName() + ";\n");
         }
@@ -144,7 +144,11 @@ final class DatabaseStorageBuilder {
     }
 
     private void writeImports(Collection<MapperDescription> mapperDescriptions) throws IOException {
-        Set<String> qualifiedNames = new HashSet<String>();
+        Set<String> qualifiedNames = new HashSet<>();
+        qualifiedNames.add("net.daverix.slingerorm.android.Database");
+        qualifiedNames.add("net.daverix.slingerorm.android.SQLiteDatabaseWrapper");
+        qualifiedNames.add("android.database.sqlite.SQLiteDatabase");
+
         for(StorageMethod storageMethod : storageMethods) {
             qualifiedNames.addAll(storageMethod.getImports());
         }
@@ -156,7 +160,7 @@ final class DatabaseStorageBuilder {
 
         qualifiedNames.remove("");
 
-        List<String> sortedNames = new ArrayList<String>(qualifiedNames);
+        List<String> sortedNames = new ArrayList<>(qualifiedNames);
         Collections.sort(sortedNames);
         for(String qualifiedName : sortedNames) {
             writeImport(qualifiedName);
@@ -174,7 +178,7 @@ final class DatabaseStorageBuilder {
 
     private void writeStorageBuilder(Collection<MapperDescription> mapperDescriptions) throws IOException {
         writer.write("    public static final class Builder {\n");
-        writer.write("        private SQLiteDatabase db;\n");
+        writer.write("        private Database db;\n");
 
         for(MapperDescription description : mapperDescriptions) {
             writer.write("        private Mapper<" + description.getEntityName() + "> " + description.getVariableName() + ";\n");
@@ -184,10 +188,18 @@ final class DatabaseStorageBuilder {
         writer.write("        }\n");
         writeln();
 
-        writer.write("        public Builder database(SQLiteDatabase db) {\n");
+        writer.write("        public Builder database(Database db) {\n");
         writer.write("            if (db == null)\n");
         writer.write("                throw new IllegalArgumentException(\"db is null\");\n\n");
         writer.write("            this.db = db;\n");
+        writer.write("            return this;\n");
+        writer.write("        }\n");
+        writeln();
+
+        writer.write("        public Builder database(SQLiteDatabase db) {\n");
+        writer.write("            if (db == null)\n");
+        writer.write("                throw new IllegalArgumentException(\"db is null\");\n\n");
+        writer.write("            this.db = new SQLiteDatabaseWrapper(db);\n");
         writer.write("            return this;\n");
         writer.write("        }\n");
         writeln();

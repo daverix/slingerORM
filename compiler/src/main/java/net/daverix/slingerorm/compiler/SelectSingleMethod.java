@@ -18,8 +18,8 @@ package net.daverix.slingerorm.compiler;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 class SelectSingleMethod implements StorageMethod {
@@ -77,9 +77,8 @@ class SelectSingleMethod implements StorageMethod {
 
     @Override
     public Collection<String> getImports() {
-        return Arrays.asList(
-                "android.database.Cursor",
-                "android.database.sqlite.SQLiteDatabase"
+        return Collections.singletonList(
+                "android.database.Cursor"
         );
     }
 

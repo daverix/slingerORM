@@ -43,8 +43,7 @@ class InsertMethod implements StorageMethod {
         writer.write("    public void " + methodName + "(" + databaseEntityTypeName + " item) {\n");
         writer.write("        if (item == null) throw new IllegalArgumentException(\"item is null\");\n");
         writer.write("\n");
-        writer.write("        db.insertOrThrow(" + mapperDescription.getVariableName() + ".getTableName(),\n");
-        writer.write("                null,\n");
+        writer.write("        db.insert(" + mapperDescription.getVariableName() + ".getTableName(),\n");
         writer.write("                " + mapperDescription.getVariableName() + ".mapValues(item));\n");
         writer.write("    }\n");
         writer.write("\n");

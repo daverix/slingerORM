@@ -98,7 +98,6 @@ class SelectMultipleMethod implements StorageMethod {
     public Collection<String> getImports() {
         return Arrays.asList(
                 "android.database.Cursor",
-                "android.database.sqlite.SQLiteDatabase",
                 "java.util.List"
         );
     }

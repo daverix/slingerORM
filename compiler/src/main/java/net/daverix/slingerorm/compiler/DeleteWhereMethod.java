@@ -76,7 +76,7 @@ class DeleteWhereMethod implements StorageMethod {
 
     @Override
     public Collection<String> getImports() {
-        return Collections.singletonList("android.database.sqlite.SQLiteDatabase");
+        return Collections.emptyList();
     }
 
     @Override
