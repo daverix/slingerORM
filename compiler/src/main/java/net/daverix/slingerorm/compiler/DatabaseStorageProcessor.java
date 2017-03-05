@@ -22,6 +22,7 @@ import net.daverix.slingerorm.annotation.DatabaseEntity;
 import net.daverix.slingerorm.annotation.DatabaseStorage;
 import net.daverix.slingerorm.annotation.Delete;
 import net.daverix.slingerorm.annotation.Insert;
+import net.daverix.slingerorm.annotation.Limit;
 import net.daverix.slingerorm.annotation.OrderBy;
 import net.daverix.slingerorm.annotation.Replace;
 import net.daverix.slingerorm.annotation.Select;
@@ -176,8 +177,10 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
 
         Where whereAnnotation = methodElement.getAnnotation(Where.class);
         OrderBy orderByAnnotation = methodElement.getAnnotation(OrderBy.class);
+        Limit limitAnnotation = methodElement.getAnnotation(Limit.class);
         String where = whereAnnotation != null ? whereAnnotation.value() : null;
         String orderBy = orderByAnnotation != null ? orderByAnnotation.value() : null;
+        String limit = limitAnnotation != null ? limitAnnotation.value() : null;
 
         int sqlArguments = getSqliteArgumentCount(where);
 
@@ -221,6 +224,7 @@ public class DatabaseStorageProcessor extends AbstractProcessor {
                     where,
                     parameterGetters,
                     orderBy,
+                    limit,
                     mapperDescription);
         }
         else {

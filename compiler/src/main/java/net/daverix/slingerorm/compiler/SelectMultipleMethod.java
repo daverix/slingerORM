@@ -28,6 +28,7 @@ class SelectMultipleMethod implements StorageMethod {
     private final String where;
     private final Collection<String> whereArgs;
     private final String orderBy;
+    private final String limit;
     private final MapperDescription mapperDescription;
 
     SelectMultipleMethod(String methodName,
@@ -36,6 +37,7 @@ class SelectMultipleMethod implements StorageMethod {
                          String where,
                          Collection<String> whereArgs,
                          String orderBy,
+                         String limit,
                          MapperDescription mapperDescription) {
         this.methodName = methodName;
         this.returnTypeName = returnTypeName;
@@ -43,6 +45,7 @@ class SelectMultipleMethod implements StorageMethod {
         this.where = where;
         this.whereArgs = whereArgs;
         this.orderBy = orderBy;
+        this.limit = limit;
         this.mapperDescription = mapperDescription;
     }
 
@@ -64,7 +67,7 @@ class SelectMultipleMethod implements StorageMethod {
         writer.write("                    null,\n");
         writer.write("                    null,\n");
         writer.write("                    " + orderByText + ",\n");
-        writer.write("                    null);\n\n");
+        writer.write("                    " + (limit != null ? "\"" + limit + "\"" : "null") + ");\n\n");
         writer.write("            return " + mapperDescription.getVariableName() + ".mapList(cursor);\n");
         writer.write("        } finally {\n");
         writer.write("            if (cursor != null) cursor.close();\n");

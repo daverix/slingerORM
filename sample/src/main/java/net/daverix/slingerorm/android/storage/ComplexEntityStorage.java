@@ -20,6 +20,8 @@ import net.daverix.slingerorm.android.model.ComplexEntity;
 import net.daverix.slingerorm.annotation.CreateTable;
 import net.daverix.slingerorm.annotation.Delete;
 import net.daverix.slingerorm.annotation.Insert;
+import net.daverix.slingerorm.annotation.Limit;
+import net.daverix.slingerorm.annotation.OrderBy;
 import net.daverix.slingerorm.annotation.Replace;
 import net.daverix.slingerorm.annotation.Select;
 import net.daverix.slingerorm.annotation.DatabaseStorage;
@@ -54,6 +56,6 @@ public interface ComplexEntityStorage {
     @Select
     List<ComplexEntity> getAllEntities();
 
-    @Select @Where("isComplex = ?")
+    @Select @Where("isComplex = ?") @OrderBy("value DESC") @Limit("2")
     List<ComplexEntity> getComplexEntities(boolean complex);
 }

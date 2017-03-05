@@ -156,6 +156,27 @@ public class ComplexEntityStorageTest {
         assertThat(actual).containsExactly(second);
     }
 
+    @Test
+    public void ShouldInsertThreeAndGetTwoBack() throws Exception {
+        final ComplexEntity first = createEntity(42, "Adam", 2, true);
+        final ComplexEntity second = createEntity(1337, "David", 3, true);
+        final ComplexEntity third = createEntity(123, "David", 4, true);
+
+        try {
+            db.beginTransaction();
+            sut.insert(first);
+            sut.insert(second);
+            sut.insert(third);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        final List<ComplexEntity> actual = sut.getComplexEntities(true);
+
+        assertThat(actual).containsExactly(third, second).inOrder();
+    }
+
     private ComplexEntity createEntity(long id, String name, double value, boolean complex) {
         ComplexEntity entity = new ComplexEntity();
         entity.setId(id);

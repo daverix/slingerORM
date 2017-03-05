@@ -243,7 +243,7 @@ Here are some of the annotations that can be used on the methods in your storage
         List<ExampleEntity> getAll();
 
         // @OrderBy and @Limit can be set on the method to add additional data to the sql query
-        @Select @OrderBy("created DESC") @Limit(5)
+        @Select @OrderBy("created DESC") @Limit("5")
         List<ExampleEntity> getLatest();
     }
 
