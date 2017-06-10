@@ -10,16 +10,16 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
 dependencies {
-    compile project(':android')
+    implementation project(':android')
     annotationProcessor project(':compiler')
 
-    testCompile 'org.mockito:mockito-core:1.10.19'
-    testCompile 'org.robolectric:robolectric:3.3'
-    testCompile 'com.google.truth:truth:0.29'
+    testImplementation 'org.mockito:mockito-core:2.6.2'
+    testImplementation 'org.robolectric:robolectric:3.3'
+    testImplementation 'com.google.truth:truth:0.32'
 }

@@ -5,9 +5,8 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile project(':core')
-
-    compile 'com.google.auto.service:auto-service:1.0-rc3'
+    implementation project(':core')
+    implementation 'com.google.auto.service:auto-service:1.0-rc3'
 }
 
 uploadArchives {
@@ -18,4 +17,3 @@ uploadArchives {
         }
     }
 }
-
