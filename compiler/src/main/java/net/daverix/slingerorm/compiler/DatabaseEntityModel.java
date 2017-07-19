@@ -20,7 +20,7 @@ import net.daverix.slingerorm.serializer.SerializeType;
 import net.daverix.slingerorm.entity.DatabaseEntity;
 import net.daverix.slingerorm.entity.FieldName;
 import net.daverix.slingerorm.entity.GetField;
-import net.daverix.slingerorm.entity.NotDatabaseField;
+import net.daverix.slingerorm.entity.IgnoreField;
 import net.daverix.slingerorm.entity.PrimaryKey;
 import net.daverix.slingerorm.entity.SerializeTo;
 import net.daverix.slingerorm.entity.SetField;
@@ -238,7 +238,7 @@ class DatabaseEntityModel {
 
         return !modifiers.contains(Modifier.STATIC) &&
                 !modifiers.contains(Modifier.TRANSIENT) &&
-                element.getAnnotation(NotDatabaseField.class) == null;
+                element.getAnnotation(IgnoreField.class) == null;
 
     }
 
