@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.compiler;
 
-import javax.lang.model.element.Element;
+package net.daverix.slingerorm.compiler
 
-interface ElementPredicate<T extends Element> {
-    boolean test(T item) throws InvalidElementException;
-}
+import javax.lang.model.element.Element
+
+internal class InvalidElementException(s: String, val element: Element) : Exception(s)

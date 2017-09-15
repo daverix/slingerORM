@@ -14,8 +14,19 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.compiler;
+package net.daverix.slingerorm.compiler
 
-interface FieldMethod {
-    String getMethod();
+import java.io.IOException
+import java.io.Writer
+
+internal interface StorageMethod {
+    @Throws(IOException::class)
+    fun write(writer: Writer)
+
+    val imports: Collection<String>
+
+    val databaseEntityTypeName: String
+    val mapperQualifiedName: String
+    val mapperVariableName: String
+    val mapperHasDependencies: Boolean
 }

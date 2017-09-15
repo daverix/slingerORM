@@ -50,7 +50,7 @@ public interface ComplexEntityStorage {
     @Delete(ComplexEntity.class) @Where("_id = ?")
     int delete(long id);
 
-    @Select @Where("_id = ?")
+    @Select
     ComplexEntity getEntity(long id);
 
     @Select

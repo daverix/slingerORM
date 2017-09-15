@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.daverix.slingerorm.compiler;
 
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
+package net.daverix.slingerorm.compiler
 
-interface TypeElementConverter {
-    TypeElement asTypeElement(TypeMirror typeMirror);
+internal class PackageProvider {
+    fun getPackage(qualifiedName: String?): String {
+        if (qualifiedName == null) throw IllegalArgumentException("qualifiedName is null")
+
+        val lastDot = qualifiedName.lastIndexOf(".")
+        return qualifiedName.substring(0, lastDot)
+    }
 }

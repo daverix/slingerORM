@@ -13,20 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package net.daverix.slingerorm.compiler
 
-package net.daverix.slingerorm.compiler;
-
-import javax.lang.model.element.Element;
-
-class InvalidElementException extends Exception {
-    private final Element element;
-
-    InvalidElementException(String s, Element element) {
-        super(s);
-        this.element = element;
-    }
-
-    Element getElement() {
-        return element;
-    }
+internal enum class ObjectType {
+    BOOLEAN,
+    INT,
+    SHORT,
+    LONG,
+    FLOAT,
+    DOUBLE,
+    STRING,
+    OTHER
 }
