@@ -66,10 +66,10 @@ class DatabaseEntityMapperBuilder constructor(private val writer: Writer) {
     private fun writeClass() {
         with(writer) {
             writeLine("public class ${databaseEntityClassName}Mapper implements Mapper<$databaseEntityClassName> {")
-            writeLines(serializers) { it -> "    private final ${it.type} ${it.name};" }
+            writeLines(serializers) { (name, type) -> "    private final $type $name;" }
             writeLine()
             writeLine("    private ${databaseEntityClassName}Mapper(${if (serializers.isNotEmpty()) "Builder builder" else ""}) {")
-            writeLines(serializers) { it -> "        this.${it.name} = builder.${it.name};" }
+            writeLines(serializers) { (name) -> "        this.$name = builder.$name;" }
             writeLine("    }")
             writeLine()
 
@@ -170,31 +170,31 @@ class DatabaseEntityMapperBuilder constructor(private val writer: Writer) {
             writeLine("        private Builder() {")
             writeLine("        }")
             writeLine()
-            writeLines(serializers) { it -> "        private ${it.type} ${it.name};" }
+            writeLines(serializers) { (name, type) -> "        private $type $name;" }
             writeLine()
 
-            serializers.forEach { serializer ->
-                writeLine("        public Builder " + serializer.name + "(" + serializer.type + " " + serializer.name + ") {")
-                writeLine("            if (" + serializer.name + " == null)")
-                writeLine("                throw new IllegalArgumentException(\"" + serializer.name + " is null\");")
+            serializers.forEach { (name, type) ->
+                writeLine("        public Builder $name($type $name) {")
+                writeLine("            if ($name == null)")
+                writeLine("                throw new IllegalArgumentException(\"$name is null\");")
                 writeLine()
-                writeLine("            this." + serializer.name + " = " + serializer.name + ";")
+                writeLine("            this.$name = $name;")
                 writeLine("            return this;")
                 writeLine("        }")
                 writeLine()
             }
 
-            writeLine("        public " + databaseEntityClassName + "Mapper build() {")
-            serializers.forEach { serializer ->
-                writeLine("            if (" + serializer.name + " == null)")
-                writeLine("                throw new IllegalStateException(\"" + serializer.name + " is not set\");")
+            writeLine("        public ${databaseEntityClassName}Mapper build() {")
+            serializers.forEach { (name) ->
+                writeLine("            if ($name == null)")
+                writeLine("                throw new IllegalStateException(\"$name is not set\");")
                 writeLine()
             }
 
             if (serializers.isEmpty()) {
-                writeLine("            return new " + databaseEntityClassName + "Mapper();\n")
+                writeLine("            return new ${databaseEntityClassName}Mapper();\n")
             } else {
-                writeLine("            return new " + databaseEntityClassName + "Mapper(this);\n")
+                writeLine("            return new ${databaseEntityClassName}Mapper(this);\n")
             }
 
             writeLine("        }")

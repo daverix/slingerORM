@@ -185,8 +185,8 @@ internal class DatabaseStorageBuilder(private val writer: Writer) {
         writeln()
 
         mapperVariables.forEach { storageMethod ->
-            writer.write("        public Builder " + storageMethod.mapperVariableName + "(Mapper<" + storageMethod.databaseEntityTypeName + "> " + storageMethod.mapperVariableName + ") {\n")
-            writer.write("            this." + storageMethod.mapperVariableName + " = " + storageMethod.mapperVariableName + ";\n")
+            writer.write("        public Builder ${storageMethod.mapperVariableName}(Mapper<${storageMethod.databaseEntityTypeName}> ${storageMethod.mapperVariableName}) {\n")
+            writer.write("            this.${storageMethod.mapperVariableName} = ${storageMethod.mapperVariableName};\n")
             writer.write("            return this;\n")
             writer.write("        }\n")
             writeln()
@@ -221,3 +221,4 @@ internal class DatabaseStorageBuilder(private val writer: Writer) {
         }
     }
 }
+

@@ -351,7 +351,7 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
 
     @Throws(InvalidElementException::class)
     private fun <T : Annotation, TOther : Annotation> ExecutableElement.checkUniqueAnnotation(annotationClass: Class<T>,
-                                      otherAnnotationClass: Class<TOther>) {
+                                                                                              otherAnnotationClass: Class<TOther>) {
         if (annotationClass != otherAnnotationClass && isAnnotationPresent(otherAnnotationClass)) {
             throw InvalidElementException("Method can't be annotated with both @${annotationClass.simpleName} and @${otherAnnotationClass.simpleName}", this)
         }
