@@ -19,7 +19,7 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal class SelectMultipleMethod(private val methodName: String,
+class SelectMultipleMethod(private val methodName: String,
                                     private val returnTypeName: String,
                                     private val parameterText: String,
                                     private val where: String?,

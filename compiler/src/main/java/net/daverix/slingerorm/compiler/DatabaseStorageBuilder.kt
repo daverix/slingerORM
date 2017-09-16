@@ -19,7 +19,7 @@ import java.io.IOException
 import java.io.Writer
 import java.util.*
 
-internal class DatabaseStorageBuilder(private val writer: Writer) {
+class DatabaseStorageBuilder(private val writer: Writer) {
     private val storageMethods = HashSet<StorageMethod>()
     private var className: String? = null
     private var packageName: String? = null

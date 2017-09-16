@@ -15,7 +15,7 @@
  */
 package net.daverix.slingerorm.compiler
 
-internal enum class ObjectType {
+enum class ObjectType {
     BOOLEAN,
     INT,
     SHORT,

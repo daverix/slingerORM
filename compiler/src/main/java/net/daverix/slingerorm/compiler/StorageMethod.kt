@@ -19,7 +19,7 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal interface StorageMethod {
+interface StorageMethod {
     @Throws(IOException::class)
     fun write(writer: Writer)
 

@@ -19,14 +19,14 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal class SelectSingleMethod(private val methodName: String,
-                                  private val parameters: String,
-                                  private val where: String,
-                                  private val whereArgs: List<String>,
-                                  override val databaseEntityTypeName: String,
-                                  override val mapperQualifiedName: String,
-                                  override val mapperVariableName: String,
-                                  override val mapperHasDependencies: Boolean) : StorageMethod {
+class SelectSingleMethod(private val methodName: String,
+                         private val parameters: String,
+                         private val where: String,
+                         private val whereArgs: List<String>,
+                         override val databaseEntityTypeName: String,
+                         override val mapperQualifiedName: String,
+                         override val mapperVariableName: String,
+                         override val mapperHasDependencies: Boolean) : StorageMethod {
 
     @Throws(IOException::class)
     override fun write(writer: Writer) {

@@ -24,7 +24,7 @@ import javax.lang.model.type.ArrayType
 import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeKind
 
-internal class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
+class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     val tableName: String
         @Throws(InvalidElementException::class)
         get() {

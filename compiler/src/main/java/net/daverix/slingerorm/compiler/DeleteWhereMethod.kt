@@ -19,15 +19,15 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal class DeleteWhereMethod(private val methodName: String,
-                                 private val returnDeleted: Boolean,
-                                 private val parameterText: String,
-                                 private val where: String?,
-                                 private val whereArgs: Collection<String>?,
-                                 override val databaseEntityTypeName: String,
-                                 override val mapperQualifiedName: String,
-                                 override val mapperVariableName: String,
-                                 override val mapperHasDependencies: Boolean) : StorageMethod {
+class DeleteWhereMethod(private val methodName: String,
+                        private val returnDeleted: Boolean,
+                        private val parameterText: String,
+                        private val where: String?,
+                        private val whereArgs: Collection<String>?,
+                        override val databaseEntityTypeName: String,
+                        override val mapperQualifiedName: String,
+                        override val mapperVariableName: String,
+                        override val mapperHasDependencies: Boolean) : StorageMethod {
 
     @Throws(IOException::class)
     override fun write(writer: Writer) {

@@ -18,4 +18,4 @@ package net.daverix.slingerorm.compiler
 
 import javax.lang.model.element.Element
 
-internal class InvalidElementException(s: String, val element: Element) : Exception(s)
+class InvalidElementException(s: String, val element: Element) : Exception(s)

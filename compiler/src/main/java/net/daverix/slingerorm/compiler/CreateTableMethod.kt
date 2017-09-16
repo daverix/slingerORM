@@ -19,11 +19,11 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal class CreateTableMethod(private val methodName: String,
-                                 override val mapperQualifiedName: String,
-                                 override val mapperVariableName: String,
-                                 override val databaseEntityTypeName: String,
-                                 override val mapperHasDependencies: Boolean) : StorageMethod {
+class CreateTableMethod(private val methodName: String,
+                        override val mapperQualifiedName: String,
+                        override val mapperVariableName: String,
+                        override val databaseEntityTypeName: String,
+                        override val mapperHasDependencies: Boolean) : StorageMethod {
     @Throws(IOException::class)
     override fun write(writer: Writer) {
         with(writer) {

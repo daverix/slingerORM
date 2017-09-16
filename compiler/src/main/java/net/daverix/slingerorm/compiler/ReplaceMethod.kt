@@ -19,7 +19,7 @@ package net.daverix.slingerorm.compiler
 import java.io.IOException
 import java.io.Writer
 
-internal class ReplaceMethod(private val methodName: String,
+class ReplaceMethod(private val methodName: String,
                              private val databaseEntityTypeQualifiedName: String,
                              override val databaseEntityTypeName: String,
                              override val mapperQualifiedName: String,
