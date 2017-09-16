@@ -59,7 +59,8 @@ class SelectSingleMethod(private val methodName: String,
         return "new String[]{${whereArgs.joinToString(", ")}}"
     }
 
-    override val imports get(): Collection<String> {
-        return listOf("android.database.Cursor")
-    }
+    override val imports
+        get(): Collection<String> {
+            return listOf("android.database.Cursor")
+        }
 }

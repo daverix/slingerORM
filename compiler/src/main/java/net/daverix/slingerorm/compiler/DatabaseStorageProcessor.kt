@@ -17,11 +17,9 @@ package net.daverix.slingerorm.compiler
 
 import net.daverix.slingerorm.entity.DatabaseEntity
 import net.daverix.slingerorm.storage.*
-import java.io.BufferedWriter
 import java.io.IOException
 import java.util.*
 import javax.annotation.processing.AbstractProcessor
-import javax.annotation.processing.ProcessingEnvironment
 import javax.annotation.processing.RoundEnvironment
 import javax.inject.Inject
 import javax.lang.model.element.ElementKind
@@ -38,14 +36,6 @@ import javax.tools.Diagnostic
  * This Processor creates Implementations of interfaces annotated with [DatabaseStorage]
  */
 open class DatabaseStorageProcessor : AbstractProcessor() {
-    private lateinit var packageProvider: PackageProvider
-
-    @Synchronized override fun init(processingEnv: ProcessingEnvironment) {
-        super.init(processingEnv)
-
-        packageProvider = PackageProvider()
-    }
-
     override fun process(typeElements: Set<TypeElement>, roundEnvironment: RoundEnvironment): Boolean {
         for (entity in roundEnvironment.getElementsAnnotatedWith(DatabaseStorage::class.java)) {
             try {
@@ -64,15 +54,12 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
 
     @Throws(IOException::class, InvalidElementException::class)
     private fun TypeElement.createStorage() {
-        val qualifiedName = qualifiedName.toString()
-        val packageName = packageProvider.getPackage(qualifiedName)
+        val packageName = qualifiedName.getPackage()
         val storageImplName = "Slinger$simpleName"
-
         val methods = getStorageMethods()
 
-        val jfo = processingEnv.filer.createSourceFile("$packageName.$storageImplName")
-        BufferedWriter(jfo.openWriter()).use { bw ->
-            DatabaseStorageBuilder.builder(bw)
+        processingEnv.filer.writeSourceFile("$packageName.$storageImplName") {
+            DatabaseStorageBuilder.builder(this)
                     .setPackage(packageName)
                     .setClassName(storageImplName)
                     .setStorageInterfaceName(simpleName.toString())

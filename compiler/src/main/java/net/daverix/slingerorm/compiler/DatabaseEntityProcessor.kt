@@ -17,56 +17,49 @@
 package net.daverix.slingerorm.compiler
 
 import net.daverix.slingerorm.entity.DatabaseEntity
-import java.io.BufferedWriter
 import java.io.IOException
 import javax.annotation.processing.AbstractProcessor
-import javax.annotation.processing.ProcessingEnvironment
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
-import javax.tools.Diagnostic
 
 /**
  * This Processor creates Mappers for each class annotated with the DatabaseEntity annotation.
  */
-
 open class DatabaseEntityProcessor : AbstractProcessor() {
-    private lateinit var packageProvider: PackageProvider
-
-    @Synchronized override fun init(processingEnv: ProcessingEnvironment) {
-        super.init(processingEnv)
-
-        packageProvider = PackageProvider()
-    }
-
     override fun process(set: Set<TypeElement>, roundEnvironment: RoundEnvironment): Boolean {
-        val entities = roundEnvironment.getElementsAnnotatedWith(DatabaseEntity::class.java)
+        val types = roundEnvironment.getElementsAnnotatedWith(DatabaseEntity::class.java)
                 .filter { !it.modifiers.contains(Modifier.ABSTRACT) }
 
-        for (entity in entities) {
+        types.forEach {
             try {
-                createMapper(entity as TypeElement)
+                createMapper(it as TypeElement)
             } catch (e: IOException) {
-                processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: ${e.localizedMessage}")
+                with(processingEnv.messager) {
+                    printError("Error creating mapper class: ${e.localizedMessage}")
+                }
             } catch (e: InvalidElementException) {
-                processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Error creating mapper class: ${e.message}", e.element)
+                with(processingEnv.messager) {
+                    printError("Error creating mapper class: ${e.message}", e.element)
+                }
             } catch (e: Exception) {
-                processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Internal error: ${e.getStackTraceString()}")
+                with(processingEnv.messager) {
+                    printError("Internal error: ${e.getStackTraceString()}")
+                }
             }
         }
         return true
     }
 
+
+
     @Throws(IOException::class, InvalidElementException::class)
     private fun createMapper(entity: TypeElement) {
         val model = DatabaseEntityModel(entity)
-        val mapperName = "${entity.simpleName}Mapper"
-        val packageName = packageProvider.getPackage(entity.qualifiedName.toString())
+        val packageName = entity.qualifiedName.getPackage()
 
-        val jfo = processingEnv.filer.createSourceFile(packageName + "." + mapperName)
-        BufferedWriter(jfo.openWriter()).use { bw ->
-            val builder = DatabaseEntityMapperBuilder.builder(bw)
-            builder.apply {
+        processingEnv.filer.writeSourceFile("$packageName.${entity.simpleName}Mapper") {
+            DatabaseEntityMapperBuilder.builder(this).apply {
                 databaseEntityClassName = (entity.simpleName.toString())
                 this.packageName = packageName
                 tableName = model.tableName

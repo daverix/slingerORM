@@ -53,7 +53,8 @@ class DeleteWhereMethod(private val methodName: String,
         return if (whereArgs == null || whereArgs.isEmpty()) "null" else "new String[]{" + whereArgs.joinToString(", ") + "}"
     }
 
-    override val imports get(): Collection<String> {
-        return emptyList()
-    }
+    override val imports
+        get(): Collection<String> {
+            return emptyList()
+        }
 }

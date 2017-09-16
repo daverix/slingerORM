@@ -43,5 +43,5 @@ class DeleteMethod(private val methodName: String,
         writer.write("\n")
     }
 
-    override val imports get()= listOf(databaseEntityTypeQualifiedName)
+    override val imports get() = listOf(databaseEntityTypeQualifiedName)
 }
