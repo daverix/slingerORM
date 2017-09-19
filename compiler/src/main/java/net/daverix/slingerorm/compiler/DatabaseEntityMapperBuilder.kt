@@ -102,18 +102,17 @@ class DatabaseEntityMapperBuilder constructor(private val writer: Writer) {
             writeLine("    }")
 
             writeLine("    @Override")
-            writeLine("    public ContentValues mapValues($databaseEntityClassName item) {")
+            writeLine("    public void mapValues($databaseEntityClassName item, DataContainer values) {")
             writeLine("        if(item == null) throw new IllegalArgumentException(\"item is null\");")
+            writeLine("        if(values == null) throw new IllegalArgumentException(\"values is null\");")
             writeLine()
 
-            writeLine("        ContentValues values = new ContentValues();")
             writeLines(getters) { it -> "        values.put(${it.method});" }
-            writeLine("        return values;")
             writeLine("    }")
             writeLine()
 
             writeLine("    @Override")
-            writeLine("    public $databaseEntityClassName mapItem(Cursor cursor) {")
+            writeLine("    public $databaseEntityClassName mapItem(DataPointer cursor) {")
             writeLine("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");")
             writeLine()
             writeLine("        $databaseEntityClassName item = new $databaseEntityClassName();")
@@ -123,7 +122,7 @@ class DatabaseEntityMapperBuilder constructor(private val writer: Writer) {
             writeLine()
 
             writeLine("    @Override")
-            writeLine("    public List<$databaseEntityClassName> mapList(Cursor cursor) {")
+            writeLine("    public List<$databaseEntityClassName> mapList(DataPointer cursor) {")
             writeLine("        if(cursor == null) throw new IllegalArgumentException(\"cursor is null\");")
             writeLine()
             writeLine("        List<$databaseEntityClassName> items = new ArrayList<$databaseEntityClassName>();")
@@ -211,9 +210,9 @@ class DatabaseEntityMapperBuilder constructor(private val writer: Writer) {
     @Throws(IOException::class)
     private fun writeImports() {
         val qualifiedNames = HashSet<String>()
-        qualifiedNames += "net.daverix.slingerorm.android.Mapper"
-        qualifiedNames += "android.content.ContentValues"
-        qualifiedNames += "android.database.Cursor"
+        qualifiedNames += "net.daverix.slingerorm.Mapper"
+        qualifiedNames += "net.daverix.slingerorm.DataContainer"
+        qualifiedNames += "net.daverix.slingerorm.DataPointer"
         qualifiedNames += "java.util.List"
         qualifiedNames += "java.util.ArrayList"
         qualifiedNames += serializers.flatMap { serializer -> serializer.imports }

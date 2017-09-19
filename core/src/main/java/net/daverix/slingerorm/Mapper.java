@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package net.daverix.slingerorm.android;
-
-import android.content.ContentValues;
-import android.database.Cursor;
+package net.daverix.slingerorm;
 
 import java.util.List;
 
@@ -43,25 +40,24 @@ public interface Mapper<T> {
     /**
      * Pulls data from item and puts it into values
      * @param item an item with getters for getting data
-     * @return a standard {@link ContentValues} object with mapped data
+     * @param values with mapped data
      */
-    ContentValues mapValues(T item);
+    void mapValues(T item, DataContainer values);
 
     /**
-     * Pulls data from cursor and calls setters on item to fill with data. Cursor must be moved to
-     * a valid position before calling this method.
-     * @param cursor a standard {@link Cursor} that must have it's pointer set to an element
-     * @return an instance of {@link T} with mapped data from the cursor
+     * Pulls data from a pointer and calls setters on item to fill with data.
+     * @param dataPointer a pointer that must be set to point at an element
+     * @return an instance of {@link T} with mapped data from the pointer
      */
-    T mapItem(Cursor cursor);
+    T mapItem(DataPointer dataPointer);
 
     /**
      * Pulls data from cursor and creates instances for each position iterating through the cursor
-     * until it's on the last position. Cursor will be moved to the first position automatically.
-     * @param cursor a standard {@link Cursor}
+     * until it's on the last position.
+     * @param pointer the pointer to get data from, will move to first position when called
      * @return an instance of {@link List<T>} with mapped data from the cursor
      */
-    List<T> mapList(Cursor cursor);
+    List<T> mapList(DataPointer pointer);
 
     /**
      * Provides SQL for updating and deleting an item by the primary key. Use it together with

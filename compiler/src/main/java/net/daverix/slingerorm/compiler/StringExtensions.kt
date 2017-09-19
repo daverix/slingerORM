@@ -8,5 +8,3 @@ fun String.countSqliteArgs(): Int {
 }
 
 fun Iterable<String>.quote(): List<String> = map { "\"$it\"" }
-
-fun CharSequence.getPackage(): String = substring(0, lastIndexOf("."))

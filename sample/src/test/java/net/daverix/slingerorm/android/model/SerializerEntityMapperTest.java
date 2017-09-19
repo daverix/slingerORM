@@ -3,7 +3,7 @@ package net.daverix.slingerorm.android.model;
 import android.content.ContentValues;
 import android.database.MatrixCursor;
 
-import net.daverix.slingerorm.android.Mapper;
+import net.daverix.slingerorm.Mapper;
 import net.daverix.slingerorm.android.serialization.DateSerializer;
 import net.daverix.slingerorm.core.android.BuildConfig;
 

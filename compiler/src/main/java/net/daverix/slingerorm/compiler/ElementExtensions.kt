@@ -114,3 +114,10 @@ fun Element.getTypeName(): String {
     }
 }
 
+fun TypeElement.getPackageName(): String {
+    return qualifiedName.substring(0, qualifiedName.lastIndexOf("."))
+}
+
+fun <T : Annotation> TypeElement.isAnnotatedWith(annotationClass: Class<T>): Boolean {
+    return getAnnotation(annotationClass) != null
+}

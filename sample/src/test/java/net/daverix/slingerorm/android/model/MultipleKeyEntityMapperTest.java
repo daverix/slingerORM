@@ -3,7 +3,7 @@ package net.daverix.slingerorm.android.model;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.android.BuildConfig;
-import net.daverix.slingerorm.android.Mapper;
+import net.daverix.slingerorm.Mapper;
 
 import org.junit.Before;
 import org.junit.Test;

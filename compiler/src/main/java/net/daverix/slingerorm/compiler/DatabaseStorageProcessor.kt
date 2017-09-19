@@ -15,6 +15,10 @@
  */
 package net.daverix.slingerorm.compiler
 
+import com.squareup.javapoet.*
+import net.daverix.slingerorm.DataContainer
+import net.daverix.slingerorm.DataPointer
+import net.daverix.slingerorm.Mapper
 import net.daverix.slingerorm.entity.DatabaseEntity
 import net.daverix.slingerorm.storage.*
 import java.io.IOException
@@ -39,7 +43,7 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
     override fun process(typeElements: Set<TypeElement>, roundEnvironment: RoundEnvironment): Boolean {
         for (entity in roundEnvironment.getElementsAnnotatedWith(DatabaseStorage::class.java)) {
             try {
-                (entity as TypeElement).createStorage()
+                createJavaFile(entity as TypeElement).writeTo(processingEnv.filer)
             } catch (e: IOException) {
                 processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Error creating storage class: " + e.localizedMessage)
             } catch (e: InvalidElementException) {
@@ -47,121 +51,387 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
             } catch (e: Exception) {
                 processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Internal error: " + e.getStackTraceString(""))
             }
-
         }
         return true // no further processing of this annotation type
     }
 
     @Throws(IOException::class, InvalidElementException::class)
-    private fun TypeElement.createStorage() {
-        val packageName = qualifiedName.getPackage()
-        val storageImplName = "Slinger$simpleName"
-        val methods = getStorageMethods()
-
-        processingEnv.filer.writeSourceFile("$packageName.$storageImplName") {
-            DatabaseStorageBuilder.builder(this)
-                    .setPackage(packageName)
-                    .setClassName(storageImplName)
-                    .setStorageInterfaceName(simpleName.toString())
-                    .addMethods(methods)
-                    .build()
+    private fun createJavaFile(element: TypeElement): JavaFile {
+        return createDatabaseStorage(element) {
+            methods = getStorageMethods(element)
+            mappers = getMappers(element)
         }
     }
 
+    private fun createDatabaseStorage(element: TypeElement, init: DatabaseStorageBuilder.() -> Unit): JavaFile {
+        val packageName = element.getPackageName()
+        val interfaceName = TypeName.get(element.asType())
+        val storageName = "Slinger${element.simpleName}"
+
+        val builder = DatabaseStorageBuilder(packageName, interfaceName, storageName)
+        builder.init()
+        return builder.build()
+    }
+
     @Throws(InvalidElementException::class)
-    private fun TypeElement.getStorageMethods(): List<StorageMethod> {
-        return enclosedElements
+    private fun getStorageMethods(element: TypeElement): List<MethodSpec> {
+        return element.enclosedElements
                 .filter { it.kind == ElementKind.METHOD }
-                .map { (it as ExecutableElement).createStorageMethod() }
+                .map { createStorageMethod(it as ExecutableElement) }
     }
 
     @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createStorageMethod(): StorageMethod {
+    private fun getMappers(element: TypeElement): List<MapperInfo> {
+        return element.enclosedElements
+                .filter { it.kind == ElementKind.METHOD }
+                .map { getDatabaseEntity(it as ExecutableElement) }
+                .distinctBy { it.qualifiedName }
+                .map { createMapperInfo(it) }
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun getDatabaseEntity(element: ExecutableElement): TypeElement {
         return when {
-            isAnnotationPresent(Insert::class.java) -> createInsertMethod()
-            isAnnotationPresent(Replace::class.java) -> createReplaceMethod()
-            isAnnotationPresent(Update::class.java) -> createUpdateMethod()
-            isAnnotationPresent(Delete::class.java) -> createDeleteMethod()
-            isAnnotationPresent(Select::class.java) -> createSelectMethod()
-            isAnnotationPresent(CreateTable::class.java) -> createCreateTableMethod()
-            else -> throw InvalidElementException("Method $simpleName must be annotated with either @CreateTable, @Insert, @Replace, @Update, @Delete or @Select", this)
+            element.isAnnotationPresent(Insert::class.java) or
+                    element.isAnnotationPresent(Replace::class.java) or
+                    element.isAnnotationPresent(Update::class.java) -> {
+                element.getDatabaseEntityElementFromFirstParameter()
+            }
+            element.isAnnotationPresent(Delete::class.java) -> {
+                if (element.isAnnotationPresent(Where::class.java)) {
+                    val delete = element.getAnnotation(Delete::class.java)
+                    delete.getTypeElement()
+                } else {
+                    element.getDatabaseEntityElementFromFirstParameter()
+                }
+            }
+            element.isAnnotationPresent(Select::class.java) -> {
+                val returnTypeElement = (element.returnType as DeclaredType).asElement() as TypeElement
+                if(returnTypeElement.isAnnotatedWith(DatabaseEntity::class.java)) {
+                    returnTypeElement
+                } else {
+                    // for example get type in a list... List<SomeType>
+                    val typeMirror = (element.returnType as DeclaredType).typeArguments[0]
+                    (typeMirror as DeclaredType).asElement() as TypeElement
+                }
+            }
+            element.isAnnotationPresent(CreateTable::class.java) -> {
+                val createTable = element.getAnnotation(CreateTable::class.java)
+                createTable.getTypeElement()
+            }
+            else -> throw InvalidElementException("Method ${element.simpleName} must be annotated with either @CreateTable, @Insert, @Replace, @Update, @Delete or @Select", element)
         }
     }
 
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createCreateTableMethod(): StorageMethod {
-        checkUniqueAnnotations(CreateTable::class.java)
-        checkHasVoidReturnType()
+    private fun createMapperInfo(databaseEntity: TypeElement): MapperInfo {
+        val mapperName = databaseEntity.toMapperVariableName()
+        val databaseEntityName = TypeName.get(databaseEntity.asType())
+        val typedMapperClassName = getMapperTypeName(databaseEntityName)
+        val implementationName = ClassName.get(databaseEntity.getPackageName(),
+                "${databaseEntity.simpleName}Mapper")
 
-        val createTable = getAnnotation(CreateTable::class.java)
-        val databaseEntity = createTable.getTypeElement()
-
-        return CreateTableMethod(simpleName.toString(),
-                "${databaseEntity.qualifiedName}Mapper",
-                "${databaseEntity.simpleName.toString().firstCharLowerCase()}Mapper",
-                databaseEntity.simpleName.toString(),
+        return MapperInfo(mapperName,
+                typedMapperClassName,
+                implementationName,
+                databaseEntityName,
                 databaseEntity.mapperHasDependencies())
     }
 
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createSelectMethod(): StorageMethod {
-        checkUniqueAnnotations(Select::class.java)
+    private fun getMapperTypeName(databaseEntityName: TypeName): ParameterizedTypeName {
+        val mapperClassName = ClassName.get(Mapper::class.java)
+        return ParameterizedTypeName.get(mapperClassName, databaseEntityName)
+    }
 
-        val whereAnnotation = getAnnotation(Where::class.java)
-        val orderByAnnotation = getAnnotation(OrderBy::class.java)
-        val limitAnnotation = getAnnotation(Limit::class.java)
+    @Throws(InvalidElementException::class)
+    private fun createStorageMethod(element: ExecutableElement): MethodSpec {
+        return when {
+            element.isAnnotationPresent(Insert::class.java) -> createInsertMethod(element)
+            element.isAnnotationPresent(Replace::class.java) -> createReplaceMethod(element)
+            element.isAnnotationPresent(Update::class.java) -> createUpdateMethod(element)
+            element.isAnnotationPresent(Delete::class.java) -> createDeleteMethod(element)
+            element.isAnnotationPresent(Select::class.java) -> createSelectMethod(element)
+            element.isAnnotationPresent(CreateTable::class.java) -> createCreateTableMethod(element)
+            else -> throw InvalidElementException("Method ${element.simpleName} must be annotated with either @CreateTable, @Insert, @Replace, @Update, @Delete or @Select", element)
+        }
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun createCreateTableMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(CreateTable::class.java)
+        element.checkHasVoidReturnType()
+
+        val createTable = element.getAnnotation(CreateTable::class.java)
+        val databaseEntity = createTable.getTypeElement()
+        val mapperVariableName = databaseEntity.toMapperVariableName()
+
+        return MethodSpec.overriding(element)
+                .addStatement("db.execSQL($mapperVariableName.createTable())")
+                .build()
+    }
+
+    private fun TypeElement.toMapperVariableName() =
+            "${simpleName.toString().firstCharLowerCase()}Mapper"
+
+    @Throws(InvalidElementException::class)
+    private fun createSelectMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(Select::class.java)
+
+        val whereAnnotation = element.getAnnotation(Where::class.java)
+        val orderByAnnotation = element.getAnnotation(OrderBy::class.java)
+        val limitAnnotation = element.getAnnotation(Limit::class.java)
         val where = whereAnnotation?.value
         val orderBy = orderByAnnotation?.value
         val limit = limitAnnotation?.value
 
         val sqlArguments = where?.countSqliteArgs()
 
-        val returnType = returnType
+        val returnType = element.returnType
         if (returnType.kind != TypeKind.DECLARED)
-            throw InvalidElementException("Method $simpleName must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", this)
+            throw InvalidElementException("Method ${element.simpleName} must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", element)
 
-        val methodSqlParams = parameters.size
+        val methodSqlParams = element.parameters.size
 
         if (where != null && sqlArguments != methodSqlParams) {
             throw InvalidElementException(String.format(Locale.ENGLISH,
                     "the sql where $where has %d arguments, the method contains %d parameters. The number of arguments and parameters should match.",
-                    sqlArguments, methodSqlParams), this)
+                    sqlArguments, methodSqlParams), element)
         }
 
-        val parameterGetters = parameters.getWhereArgs()
-        val parameterText = parameters.asParameterText()
-
+        val parameterArguments = element.parameters.getWhereArgs()
         val returnTypeElement = (returnType as DeclaredType).asElement() as TypeElement
+        val methodName = element.simpleName.toString()
+
         when {
-            returnTypeElement.getAnnotation(DatabaseEntity::class.java) != null -> {
-                return SelectSingleMethod(simpleName.toString(),
-                        parameterText,
+            returnTypeElement.isAnnotatedWith(DatabaseEntity::class.java) -> {
+                return createSingleSelectMethod(element,
+                        returnTypeElement.toMapperVariableName(),
                         where ?: createWhereWithPrimaryKey(returnType),
-                        parameterGetters,
-                        returnTypeElement.simpleName.toString(),
-                        "${returnTypeElement.qualifiedName}Mapper",
-                        "${returnTypeElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                        returnTypeElement.mapperHasDependencies())
+                        parameterArguments)
             }
             SUPPORTED_RETURN_TYPES_FOR_SELECT.contains(returnTypeElement.qualifiedName.toString()) -> {
                 val typeMirror = returnType.typeArguments[0]
                 val databaseEntityElement = (typeMirror as DeclaredType).asElement() as TypeElement
-                val returnTypeName = databaseEntityElement.simpleName.toString()
+                val mapperVariable = databaseEntityElement.toMapperVariableName()
 
-                return SelectMultipleMethod(simpleName.toString(),
-                        returnTypeElement.simpleName.toString() + "<" + returnTypeName + ">",
-                        parameterText,
+                return createMultiSelectMethod(element,
+                        mapperVariable,
                         where,
-                        parameterGetters,
+                        parameterArguments,
                         orderBy,
-                        limit,
-                        databaseEntityElement.simpleName.toString(),
-                        "${databaseEntityElement.qualifiedName}Mapper",
-                        "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                        databaseEntityElement.mapperHasDependencies())
+                        limit)
             }
-            else -> throw InvalidElementException("Method $simpleName must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", this)
+            else -> throw InvalidElementException("Method $methodName must return a type annotated with @DatabaseEntity or a list of a type annotated with @DatabaseEntity", element)
         }
+    }
+
+    private fun createSingleSelectMethod(element: ExecutableElement,
+                                         mapperVariable: String,
+                                         where: String,
+                                         parameterArguments: String): MethodSpec {
+        val code = CodeBlock.builder()
+                .add("pointer = db.query(false,\n")
+                .add("        $mapperVariable.getTableName(),\n")
+                .add("        $mapperVariable.getFieldNames(),\n")
+                .add("        \$S,\n", where)
+                .add("        $parameterArguments,\n")
+                .add("        null,\n")
+                .add("        null,\n")
+                .add("        null,\n")
+                .add("        \$S);\n\n", 1)
+                .build()
+
+        return MethodSpec.overriding(element)
+                .addStatement("\$T pointer = null", DataPointer::class.java)
+                .beginControlFlow("try")
+                .addCode(code)
+                .beginControlFlow("if (!pointer.moveToFirst())")
+                .addStatement("return null")
+                .endControlFlow()
+                .addStatement("return $mapperVariable.mapItem(pointer)")
+                .nextControlFlow("finally")
+                .addStatement("if(pointer != null) pointer.close()")
+                .endControlFlow()
+                .build()
+    }
+
+    private fun createMultiSelectMethod(element: ExecutableElement,
+                                        mapperVariable: String,
+                                        where: String?,
+                                        parameterArguments: String,
+                                        orderBy: String?,
+                                        limit: String?): MethodSpec {
+        val code = CodeBlock.builder()
+                .add("pointer = db.query(false,\n")
+                .add("        $mapperVariable.getTableName(),\n")
+                .add("        $mapperVariable.getFieldNames(),\n")
+                .add("        ${if (where == null) "null" else "\"$where\""},\n")
+                .add("        $parameterArguments,\n")
+                .add("        null,\n")
+                .add("        null,\n")
+                .add("        ${if (orderBy == null) "null" else "\"$orderBy\""},\n")
+                .add("        ${if (limit == null) "null" else "\"$limit\""});\n\n")
+                .build()
+
+        return MethodSpec.overriding(element)
+                .addStatement("\$T pointer = null", DataPointer::class.java)
+                .beginControlFlow("try")
+                .addCode(code)
+                .addStatement("return $mapperVariable.mapList(pointer)")
+                .nextControlFlow("finally")
+                .addStatement("if(pointer != null) pointer.close()")
+                .endControlFlow()
+                .build()
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun createDeleteMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(Delete::class.java)
+
+        val returnTypeKind = element.returnType.kind
+        if (returnTypeKind != TypeKind.INT && returnTypeKind != TypeKind.VOID)
+            throw InvalidElementException("Only int and void are supported as return types for Delete annotated methods", element)
+
+        val whereAnnotation = element.getAnnotation(Where::class.java)
+        if (whereAnnotation == null) {
+            element.checkFirstParameterMustBeDatabaseEntity()
+
+            val databaseEntityElement = element.getDatabaseEntityElementFromFirstParameter()
+            return createDeleteSingleMethod(element, databaseEntityElement.toMapperVariableName())
+        }
+
+        val delete = element.getAnnotation(Delete::class.java)
+        val databaseEntityElement = delete.getTypeElement()
+        if ("java.lang.Object" == databaseEntityElement.qualifiedName.toString())
+            throw InvalidElementException("Where together with Delete requires the type to delete to be set in Delete annotation", element)
+
+        val where = whereAnnotation.value
+        val sqlArgumentsCount = where.countSqliteArgs()
+
+        if (sqlArgumentsCount != element.parameters.size) {
+            throw InvalidElementException("the sql where argument has $sqlArgumentsCount arguments, the method contains ${element.parameters.size}", element)
+        }
+
+        val whereArgs = element.parameters.getWhereArgs()
+
+        return createDeleteWhereMethod(element,
+                databaseEntityElement.toMapperVariableName(),
+                where,
+                whereArgs)
+    }
+
+    private fun createDeleteSingleMethod(element: ExecutableElement,
+                                         mapperVariable: String): MethodSpec {
+        val parameterName = element.parameters[0].simpleName.toString()
+        val codeBlock = CodeBlock.builder()
+                .add("${if (element.returnType.kind == TypeKind.VOID) {
+                    ""
+                } else {
+                    "return "
+                }}db.delete($mapperVariable.getTableName(),\n")
+                .add("        $mapperVariable.getItemQuery(),\n")
+                .add("        $mapperVariable.getItemQueryArguments($parameterName));\n")
+                .build()
+
+        return MethodSpec.overriding(element)
+                .addStatement("if ($parameterName == null) throw new \$T(\"$parameterName is null\")",
+                        IllegalArgumentException::class.java)
+                .addCode("\n")
+                .addCode(codeBlock)
+                .build()
+    }
+
+    private fun createDeleteWhereMethod(element: ExecutableElement,
+                                        mapperVariable: String,
+                                        where: String?,
+                                        whereArgs: String): MethodSpec {
+        val codeBlock = CodeBlock.builder()
+                .add("${if (element.returnType.kind == TypeKind.VOID) {
+                    ""
+                } else {
+                    "return "
+                }}db.delete($mapperVariable.getTableName(),\n")
+                .add("        ${if (where == null) "null" else "\"$where\""},\n")
+                .add("        $whereArgs);\n")
+                .build()
+
+        return MethodSpec.overriding(element)
+                .addCode(codeBlock)
+                .build()
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun createUpdateMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(Update::class.java)
+        element.checkFirstParameterMustBeDatabaseEntity()
+
+        val databaseEntityElement = element.getDatabaseEntityElementFromFirstParameter()
+
+        val parameterName = element.parameters[0].simpleName
+        val mapperVariable = databaseEntityElement.toMapperVariableName()
+
+        return MethodSpec.overriding(element)
+                .addStatement("if ($parameterName == null) throw new \$T(\"$parameterName is null\")",
+                        IllegalArgumentException::class.java)
+                .addCode("\n")
+                .addStatement("\$T container = db.edit($mapperVariable.getTableName())",
+                        DataContainer::class.java)
+                .addStatement("$mapperVariable.mapValues($parameterName, container)")
+                .addStatement("${if(element.returnType.kind == TypeKind.VOID) {
+                    ""
+                } else {
+                    "return "
+                }}container.update($mapperVariable.getItemQuery(), $mapperVariable.getItemQueryArguments($parameterName))")
+                .build()
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun createReplaceMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(Replace::class.java)
+        element.checkFirstParameterMustBeDatabaseEntity()
+        element.checkHasOneParameter()
+
+        val databaseEntityElement = element.getDatabaseEntityElementFromFirstParameter()
+        val mapperVariable = databaseEntityElement.toMapperVariableName()
+        val parameterName = element.parameters[0].simpleName
+
+        return MethodSpec.overriding(element)
+                .addStatement("if ($parameterName == null) throw new \$T(\"$parameterName is null\")",
+                        IllegalArgumentException::class.java)
+                .addCode("\n")
+                .addStatement("\$T container = db.edit($mapperVariable.getTableName())",
+                        DataContainer::class.java)
+                .addStatement("$mapperVariable.mapValues($parameterName, container)")
+                .addStatement("${if(element.returnType.kind == TypeKind.VOID) {
+                    ""
+                } else {
+                    "return "
+                }}container.replace()")
+                .build()
+    }
+
+    @Throws(InvalidElementException::class)
+    private fun createInsertMethod(element: ExecutableElement): MethodSpec {
+        element.checkUniqueAnnotations(Insert::class.java)
+        element.checkFirstParameterMustBeDatabaseEntity()
+        element.checkHasOneParameter()
+
+        val databaseEntityElement = element.getDatabaseEntityElementFromFirstParameter()
+        val mapperVariable = databaseEntityElement.toMapperVariableName()
+        val parameterName = element.parameters[0].simpleName
+
+        return MethodSpec.overriding(element)
+                .addStatement("if ($parameterName == null) throw new \$T(\"$parameterName is null\")",
+                        IllegalArgumentException::class.java)
+                .addCode("\n")
+                .addStatement("\$T container = db.edit($mapperVariable.getTableName())",
+                        DataContainer::class.java)
+                .addStatement("$mapperVariable.mapValues($parameterName, container)")
+                .addStatement("${if(element.returnType.kind == TypeKind.VOID) {
+                    ""
+                } else {
+                    "return "
+                }}container.insert()")
+                .build()
     }
 
     private fun createWhereWithPrimaryKey(returnType: TypeMirror): String {
@@ -170,73 +440,20 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
         return DatabaseEntityModel(typeElement).itemSql
     }
 
-    private fun List<VariableElement>.getWhereArgs(): List<String> {
-        val whereArgs = ArrayList<String>()
-        forEach {
+    private fun List<VariableElement>.getWhereArgs(): String {
+        val args = map {
             when {
-                it.isString() -> whereArgs.add(it.simpleName.toString())
-                it.getTypeKind() === TypeKind.BOOLEAN -> whereArgs.add("${it.simpleName} ? \"1\" : \"0\"")
-                else -> whereArgs.add("String.valueOf(${it.simpleName})")
+                it.isString() -> it.simpleName.toString()
+                it.getTypeKind() === TypeKind.BOOLEAN -> "${it.simpleName} ? \"1\" : \"0\""
+                else -> "String.valueOf(${it.simpleName})"
             }
-        }
-        return whereArgs
-    }
+        }.joinToString(", ")
 
-    @Throws(InvalidElementException::class)
-    private fun List<VariableElement>.asParameterText(): String {
-        return map {
-            return "${it.getTypeName()} ${it.simpleName}"
-        }.joinToString(",")
-    }
-
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createDeleteMethod(): StorageMethod {
-        checkUniqueAnnotations(Delete::class.java)
-
-        val returnTypeKind = returnType.kind
-        if (returnTypeKind != TypeKind.INT && returnTypeKind != TypeKind.VOID)
-            throw InvalidElementException("Only int and void are supported as return types for Delete annotated methods", this)
-
-        val returnDeleted = returnTypeKind == TypeKind.INT
-
-        val whereAnnotation = getAnnotation(Where::class.java)
-        if (whereAnnotation == null) {
-            checkFirstParameterMustBeDatabaseEntity()
-
-            val databaseEntityElement = getDatabaseEntityElementFromFirstParameter()
-            return DeleteMethod(simpleName.toString(),
-                    returnDeleted,
-                    databaseEntityElement.qualifiedName.toString(),
-                    databaseEntityElement.simpleName.toString(),
-                    "${databaseEntityElement.qualifiedName}Mapper",
-                    "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                    databaseEntityElement.mapperHasDependencies())
+        if(args.isEmpty()) {
+            return "null"
         }
 
-        val delete = getAnnotation(Delete::class.java)
-        val databaseEntityElement = delete.getTypeElement()
-        if ("java.lang.Object" == databaseEntityElement.qualifiedName.toString())
-            throw InvalidElementException("Where together with Delete requires the type to delete to be set in Delete annotation", this)
-
-        val where = whereAnnotation.value
-        val sqlArgumentsCount = where.countSqliteArgs()
-
-        if (sqlArgumentsCount != parameters.size) {
-            throw InvalidElementException("the sql where argument has $sqlArgumentsCount arguments, the method contains ${parameters.size}", this)
-        }
-
-        val parameterGetters = parameters.getWhereArgs()
-        val parameterText = parameters.asParameterText()
-
-        return DeleteWhereMethod(simpleName.toString(),
-                returnDeleted,
-                parameterText,
-                where,
-                parameterGetters,
-                databaseEntityElement.simpleName.toString(),
-                "${databaseEntityElement.qualifiedName}Mapper",
-                "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                databaseEntityElement.mapperHasDependencies())
+        return "new String[]{$args}"
     }
 
     @Throws(InvalidElementException::class)
@@ -244,55 +461,6 @@ open class DatabaseStorageProcessor : AbstractProcessor() {
         val typeElement = processingEnv.elementUtils.getTypeElement(qualifiedName.toString() + "Mapper.Builder")
         return typeElement != null && typeElement.getMethods()
                 .any { method -> "create" == method.simpleName.toString() }
-    }
-
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createUpdateMethod(): StorageMethod {
-        checkUniqueAnnotations(Update::class.java)
-        checkFirstParameterMustBeDatabaseEntity()
-
-        val databaseEntityElement = getDatabaseEntityElementFromFirstParameter()
-
-        return UpdateMethod(simpleName.toString(),
-                databaseEntityElement.qualifiedName.toString(),
-                databaseEntityElement.simpleName.toString(),
-                "${databaseEntityElement.qualifiedName}Mapper",
-                "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                databaseEntityElement.mapperHasDependencies())
-    }
-
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createReplaceMethod(): StorageMethod {
-        checkUniqueAnnotations(Replace::class.java)
-        checkFirstParameterMustBeDatabaseEntity()
-        checkHasOneParameter()
-
-        val databaseEntityElement = getDatabaseEntityElementFromFirstParameter()
-
-        return ReplaceMethod(simpleName.toString(),
-                databaseEntityElement.qualifiedName.toString(),
-                databaseEntityElement.simpleName.toString(),
-                "${databaseEntityElement.qualifiedName}Mapper",
-                "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                databaseEntityElement.mapperHasDependencies()
-        )
-    }
-
-    @Throws(InvalidElementException::class)
-    private fun ExecutableElement.createInsertMethod(): StorageMethod {
-        checkUniqueAnnotations(Insert::class.java)
-        checkFirstParameterMustBeDatabaseEntity()
-        checkHasOneParameter()
-
-        val databaseEntityElement = getDatabaseEntityElementFromFirstParameter()
-
-        return InsertMethod(simpleName.toString(),
-                databaseEntityElement.qualifiedName.toString(),
-                databaseEntityElement.simpleName.toString(),
-                "${databaseEntityElement.qualifiedName}Mapper",
-                "${databaseEntityElement.simpleName.toString().firstCharLowerCase()}Mapper",
-                databaseEntityElement.mapperHasDependencies()
-        )
     }
 
     private fun ExecutableElement.getDatabaseEntityElementFromFirstParameter(): TypeElement {

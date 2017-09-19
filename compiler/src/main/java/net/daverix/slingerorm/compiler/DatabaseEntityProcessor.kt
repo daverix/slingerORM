@@ -56,7 +56,7 @@ open class DatabaseEntityProcessor : AbstractProcessor() {
     @Throws(IOException::class, InvalidElementException::class)
     private fun createMapper(entity: TypeElement) {
         val model = DatabaseEntityModel(entity)
-        val packageName = entity.qualifiedName.getPackage()
+        val packageName = entity.getPackageName()
 
         processingEnv.filer.writeSourceFile("$packageName.${entity.simpleName}Mapper") {
             DatabaseEntityMapperBuilder.builder(this).apply {
