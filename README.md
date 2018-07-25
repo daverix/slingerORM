@@ -1,8 +1,9 @@
 SlingerORM
 ==========
 
-SlingerORM is a simple Object Relation Mapper (ORM) focusing on speed and simplicity. It uses code
-generation to generate code against the database that you don't want to write over and over again.
+SlingerORM is a simple Object Relation Mapper (ORM) for Android that focusing on speed and 
+simplicity. It uses code generation to generate code against the database that you don't want to 
+write over and over again.
 
 Basic usage
 ----------
@@ -108,34 +109,6 @@ have mapped. You will write the wrong field name or having to add even more code
 constants to be sure every field is mapped right. SlingerORM solves this problem by looking at
 annotations for your class that represents your database table and generate the code above for you!
 
-SlingerORM generates code using two annotation processors. The first generates a mapper class
-that you can use to map the tedious part in the example above:
-
-Insert:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
-    db.insertOrThrow(mapper.getTableName(), null, mapper.mapValues(item));
-
-Query:
-
-    Mapper<ExampleEntity> mapper = new ExampleEntityMapper()
-    Cursor cursor = null;
-    try {
-        cursor = db.query(false, mapper.getTableName(), mapper.getFieldNames(), "_id = ?",
-                new String[] {
-            String.valueOf(id)
-        }, null, null, null, "1");
-        if(!cursor.moveToFirst()) return null;
-
-        return mapper.mapItem(cursor);
-    } finally {
-        if(cursor != null) cursor.close();
-    }
-
-The second annotation processor generates code for inserting, updating, deleting, querying etc
-depending on what methods you provide in your custom storage interface (as seen in the basic usage
-above)
-
 Configuring the DatabaseEntity
 ------------------------------
 
@@ -186,28 +159,8 @@ can annotate these fields with @FieldName:
       ...
     }
 
-Using the mapper standalone
----------------------------
-
-It's possible to use the database entity mapper and then do the quering etc yourself. You get an
-implementation of the Mapper interface by suffixing the database entity name with "Mapper":
-
-    Mapper<ExampleEntity> exampleEntityMapper = ExampleEntityMapper.create();
-    ...
-
 Configuring the storage class
 -----------------------------
-
-The storage class uses one or more mappers that can be configured by calling methods in the builder.
-The number of mappers used for a storage depends on how many different database entities are used
-in the storage class:
-
-    ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(ExampleEntityMapper.create())
-        .otherExampleMapper(OtherExampleMapper.create())
-        .database(db)
-        .build();
-    ...
 
 Here are some of the annotations that can be used on the methods in your storage interface:
 
@@ -252,14 +205,20 @@ Using a custom serializer
 
 Sometimes some type of fields in the database entity will not be a native data type that SlingerORM
 supports. You will then need to implement your custom serializer. Create a class that implements 
-the Serializer interface and add "@SerializeTo" to the field that needs to be serialized.
+the Serializer interface and add "@SerializeWith" to the storage interface.
 
     @DatabaseEntity
     public class ExampleEntity {
-        @SerializeTo(SerializeType.LONG)
         private Date created;
         
         // ...
+    }
+
+    @DatabaseStorage
+    @SerializeWith(ExampleDateSerializer.class)
+    public interface ExampleEntityStorage {
+        @Select
+        ExampleEntity get(String id);
     }
 
     public class ExampleDateSerilizer implements Serializer<Date,Long> {
@@ -276,16 +235,9 @@ the Serializer interface and add "@SerializeTo" to the field that needs to be se
 
 To tell SlingerORM which serializer to use, set the serializer in the builder:
 
-    Mapper<ExampleEntity> mapper = ExampleEntityMapper.builder()
-        .dateToLongSerializer(new MyDateSerializer())
-        .build();
-    
-
-The storage class will then require you to pass in the mapper because it now doesn't know about 
-the mappers dependencies:
-
     ExampleEntityStorage storage = SlingerExampleEntityStorage.builder()
-        .exampleEntityMapper(mapper)
+        .exampleDateSerializer(new MyDateSerializer())
+        .database(db)
         .build();
 
 Download
