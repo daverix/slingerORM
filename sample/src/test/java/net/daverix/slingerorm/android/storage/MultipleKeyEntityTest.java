@@ -3,7 +3,6 @@ package net.daverix.slingerorm.android.storage;
 import android.database.sqlite.SQLiteDatabase;
 
 import net.daverix.slingerorm.android.BuildConfig;
-import net.daverix.slingerorm.android.SQLiteDatabaseWrapper;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -23,7 +22,7 @@ public class MultipleKeyEntityTest {
     public void setUp() {
         db = SQLiteDatabase.create(null);
         sut = SlingerMultipleKeyEntityStorage.builder()
-                .database(new SQLiteDatabaseWrapper(db))
+                .database(db)
                 .build();
     }
 
