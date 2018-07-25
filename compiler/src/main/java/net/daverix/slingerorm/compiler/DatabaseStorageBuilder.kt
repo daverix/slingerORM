@@ -5,80 +5,72 @@ import net.daverix.slingerorm.Database
 import java.lang.IllegalArgumentException
 import javax.lang.model.element.Modifier
 
+interface DatabaseStorageBuilderVisitor {
+    fun visit(builder: DatabaseStorageBuilder)
+}
 
-class DatabaseStorageBuilder(private val packageName: String,
-                             private val interfaceName: TypeName,
-                             private val storageName: String) {
-    var mappers = emptyList<MapperInfo>()
-    var methods = emptyList<MethodSpec>()
+fun buildStorage(packageName: String,
+                 interfaceName: TypeName,
+                 storageName: String,
+                 func: DatabaseStorageBuilder.()->Unit): JavaFile {
+    val builder = DatabaseStorageBuilder(packageName, interfaceName, storageName)
+    func(builder)
+    return builder.build()
+}
 
-    fun build(): JavaFile {
-        val storageClassName = ClassName.get(packageName, storageName)
-        val builderClassName = ClassName.get(packageName, storageName,"Builder")
+class DatabaseStorageBuilder internal constructor(private val packageName: String,
+                                                  private val interfaceName: TypeName,
+                                                  private val storageName: String) {
+    val fields = ArrayList<FieldSpec>()
+    val methods = ArrayList<MethodSpec>()
 
-        val storageBuilderClass = createStorageBuilderClass(builderClassName, storageClassName,
-                mappers)
-        val storageClass = createStorageClass(storageClassName, interfaceName, builderClassName,
-                mappers, methods, storageBuilderClass)
-        return JavaFile.builder(packageName, storageClass).build()
+    fun accept(visitor: DatabaseStorageBuilderVisitor): DatabaseStorageBuilder {
+        visitor.visit(this)
+        return this
     }
 
-    private fun createStorageClass(className: ClassName,
-                                   interfaceName: TypeName,
-                                   builderName: ClassName,
-                                   mappers: List<MapperInfo>,
-                                   methods: List<MethodSpec>,
-                                   builder: TypeSpec): TypeSpec {
+    fun build(): JavaFile = JavaFile.builder(packageName, createStorageClass()).build()
+
+    private fun createStorageClass(): TypeSpec {
+        val implementationName = "Slinger$storageName"
+        val storageClassName = ClassName.get(packageName, implementationName)
+        val builderClassName = ClassName.get(packageName, implementationName,"Builder")
+
         val databaseFieldName = "db"
-        val databaseField = FieldSpec.builder(Database::class.java, databaseFieldName)
-                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
-                .build()
-        val mapperFields = mappers.map { createMapperField(it, Modifier.PRIVATE, Modifier.FINAL) }
+        val databaseField = createDatabaseField(databaseFieldName)
 
         val constructor = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PRIVATE)
-                .addParameter(ParameterSpec.builder(builderName, "builder").build())
+                .addParameter(ParameterSpec.builder(builderClassName, "builder").build())
                 .addFieldAssignStatement("db", "builder")
-                .addMapperFieldsAssignments(mappers)
                 .build()
 
         val builderMethod = MethodSpec.methodBuilder("builder")
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(builderName)
-                .addStatement("return new \$T()", builderName)
+                .returns(builderClassName)
+                .addStatement("return new \$T()", builderClassName)
                 .build()
 
-        return TypeSpec.classBuilder(className)
+        val storageBuilderClass = createStorageBuilderClass(builderClassName, storageClassName)
+
+        return TypeSpec.classBuilder(storageClassName)
+                .addModifiers(Modifier.PUBLIC)
                 .addSuperinterface(interfaceName)
                 .addField(databaseField)
-                .addFields(mapperFields)
+                .addFields(fields)
                 .addMethod(constructor)
                 .addMethods(methods)
                 .addMethod(builderMethod)
-                .addType(builder)
+                .addType(storageBuilderClass)
                 .build()
     }
 
-    private fun MethodSpec.Builder.addMapperFieldsAssignments(
-            mappers: List<MapperInfo>): MethodSpec.Builder {
-        mappers.forEach { addFieldAssignStatement(it.variableName, "builder") }
-        return this
-    }
-
-    private fun MethodSpec.Builder.addFieldAssignStatement(
-            fieldName: String,
-            parameterName: String): MethodSpec.Builder {
-        return addStatement("this.$fieldName = $parameterName.$fieldName")
-    }
-
     private fun createStorageBuilderClass(builderClassName: ClassName,
-                                          storageClassname: ClassName,
-                                          mappers: List<MapperInfo>): TypeSpec {
+                                          storageClassName: ClassName): TypeSpec {
         val databaseFieldName = "db"
         val databaseField = FieldSpec.builder(Database::class.java, databaseFieldName)
                 .addModifiers(Modifier.PRIVATE)
                 .build()
-        val mapperFields = mappers.map { createMapperField(it, Modifier.PRIVATE) }
 
         val constructor = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PRIVATE)
@@ -90,40 +82,32 @@ class DatabaseStorageBuilder(private val packageName: String,
                 ClassName.get(Database::class.java),
                 builderClassName)
 
-        val mapperMethods = mappers.map { createMapperMethod(it, builderClassName) }
-
         val buildMethod = MethodSpec.methodBuilder("build")
                 .addModifiers(Modifier.PUBLIC)
-                .returns(storageClassname)
+                .returns(interfaceName)
                 .addFieldNotSetStatement("db", "database")
-                .addMappersBuildStatements(mappers)
-                .addStatement("return new \$T(this)", storageClassname)
+                .addStatement("return new \$T(this)", storageClassName)
                 .build()
 
         return TypeSpec.classBuilder(builderClassName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
                 .addField(databaseField)
-                .addFields(mapperFields)
                 .addMethod(constructor)
                 .addMethod(databaseMethod)
-                .addMethods(mapperMethods)
                 .addMethod(buildMethod)
                 .build()
     }
 
-    private fun MethodSpec.Builder.addMappersBuildStatements(
-            mappers: Iterable<MapperInfo>): MethodSpec.Builder {
-        mappers.forEach {
-            if (it.hasDependencies)
-                addFieldNotSetStatement(it.variableName, it.variableName)
-            else {
-                beginControlFlow("if (${it.variableName} == null)")
-                        .addStatement("this.${it.variableName} = \$T.create()", it.typeName)
-                        .endControlFlow()
-            }
-        }
+    private fun createDatabaseField(databaseFieldName: String): FieldSpec? {
+        return FieldSpec.builder(Database::class.java, databaseFieldName)
+                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
+                .build()
+    }
 
-        return this
+    private fun MethodSpec.Builder.addFieldAssignStatement(
+            fieldName: String,
+            parameterName: String): MethodSpec.Builder {
+        return addStatement("this.$fieldName = $parameterName.$fieldName")
     }
 
     private fun createSetterMethod(methodName: String,
@@ -151,19 +135,5 @@ class DatabaseStorageBuilder(private val packageName: String,
                         IllegalArgumentException::class.java,
                         "$name is not set")
                 .endControlFlow()
-    }
-
-    private fun createMapperMethod(mapper: MapperInfo, builderName: TypeName): MethodSpec {
-        return createSetterMethod(mapper.variableName,
-                mapper.variableName,
-                mapper.variableName,
-                mapper.interfaceTypeName,
-                builderName)
-    }
-
-    private fun createMapperField(mapperInfo: MapperInfo, vararg modifiers: Modifier): FieldSpec {
-        return FieldSpec.builder(mapperInfo.interfaceTypeName, mapperInfo.variableName)
-                .addModifiers(*modifiers)
-                .build()
     }
 }

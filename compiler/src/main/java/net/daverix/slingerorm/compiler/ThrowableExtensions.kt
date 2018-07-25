@@ -27,14 +27,12 @@ fun Throwable.getStackTraceString(indent: String = ""): String {
 
     // Print suppressed exceptions indented one level deeper.
     if (suppressed != null) {
-        suppressed
-                .map { it.getStackTraceString("$indent\t") }
+        suppressed.map { it.getStackTraceString("$indent\t") }
                 .forEach { sb.append("$indent\tSuppressed: $it") }
     }
 
-    val localCause = cause
-    if (localCause != null) {
-        val causeTrace = localCause.getStackTraceString(indent)
+    val causeTrace = cause?.getStackTraceString(indent)
+    if(causeTrace != null) {
         sb.append("$indent\tCaused by: $causeTrace")
     }
 

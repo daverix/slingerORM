@@ -19,31 +19,41 @@ import java.util.*
 import javax.lang.model.element.*
 import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeKind
+import javax.lang.model.type.TypeMirror
+import kotlin.reflect.KClass
 
 
 const val TYPE_STRING = "java.lang.String"
 
-fun Element.getTypeKind(): TypeKind {
-    return asType().kind
+val Element.typeKind: TypeKind get() = asType().kind
+
+val Element.typeKindName: String get() = when (typeKind) {
+    TypeKind.INT -> "int"
+    TypeKind.SHORT -> "short"
+    TypeKind.LONG -> "long"
+    TypeKind.FLOAT -> "float"
+    TypeKind.DOUBLE -> "double"
+    TypeKind.CHAR -> "char"
+    TypeKind.BYTE -> "byte"
+    TypeKind.BOOLEAN -> "boolean"
+    TypeKind.DECLARED -> {
+        val typeElement = (asType() as DeclaredType).asElement() as TypeElement
+        typeElement.simpleName.toString()
+    }
+    else -> throw InvalidElementException(typeKind.toString() + " is not known, bug?", this)
 }
 
-fun Element.isAccessible(): Boolean {
-    return !modifiers.contains(Modifier.TRANSIENT) &&
-            !modifiers.contains(Modifier.PROTECTED) &&
-            !modifiers.contains(Modifier.STATIC) &&
-            !modifiers.contains(Modifier.PRIVATE)
+val Element.isAccessible: Boolean get() {
+    return Modifier.TRANSIENT !in modifiers &&
+            Modifier.PROTECTED !in modifiers &&
+            Modifier.STATIC !in modifiers &&
+            Modifier.PRIVATE !in modifiers
 }
 
 @Throws(InvalidElementException::class)
-fun Element.getQualifiedMapperName(): String {
-    return asElement().qualifiedName.toString()
-}
-
-@Throws(InvalidElementException::class)
-fun Element.asElement(): TypeElement {
-    val elementTypeKind = getTypeKind()
-    if (elementTypeKind != TypeKind.DECLARED)
-        throw InvalidElementException("Element is not a declared type: " + elementTypeKind, this)
+fun Element.asTypeElement(): TypeElement {
+    if (typeKind != TypeKind.DECLARED)
+        throw InvalidElementException("Element is not a declared type: $typeKind", this)
 
     if (asType() !is DeclaredType) {
         throw InvalidElementException("mirrorType expected to be DeclaredType but was " + asType(), this)
@@ -53,7 +63,11 @@ fun Element.asElement(): TypeElement {
     return declaredType.asElement() as TypeElement
 }
 
-fun TypeElement.getElements(): List<Element> {
+val Element.qualifiedMapperName: String get() {
+    return asTypeElement().qualifiedName.toString()
+}
+
+val TypeElement.elements: List<Element> get() {
     val elements = ArrayList<Element>()
     val visitedTypes = HashSet<String>()
     addElements(elements, this, visitedTypes)
@@ -78,46 +92,42 @@ private fun addElements(elements: MutableList<Element>,
     }
 }
 
-@Throws(InvalidElementException::class)
-fun TypeElement.getMethods(): List<ExecutableElement> {
-    return getElements()
-            .filter { it.kind == ElementKind.METHOD && it.isAccessible() }
+val TypeElement.methods: List<ExecutableElement> get() {
+    return elements.filter { it.kind == ElementKind.METHOD && it.isAccessible }
             .map { it as ExecutableElement }
-            .toList()
+}
+
+val TypeElement.directMethods: List<ExecutableElement> get() {
+    return enclosedElements.filter { it.kind == ElementKind.METHOD }
+            .map { it as ExecutableElement }
 }
 
 fun Element.isString(): Boolean {
-    return if (getTypeKind() == TypeKind.DECLARED) {
+    return if (typeKind == TypeKind.DECLARED) {
         val declaredType = asType() as DeclaredType
         val typeElement = declaredType.asElement() as TypeElement
         typeElement.qualifiedName.toString() == TYPE_STRING
     } else false
 }
 
-@Throws(InvalidElementException::class)
-fun Element.getTypeName(): String {
-    val typeKind = asType().kind
-    return when (typeKind) {
-        TypeKind.INT -> "int"
-        TypeKind.SHORT -> "short"
-        TypeKind.LONG -> "long"
-        TypeKind.FLOAT -> "float"
-        TypeKind.DOUBLE -> "double"
-        TypeKind.CHAR -> "char"
-        TypeKind.BYTE -> "byte"
-        TypeKind.BOOLEAN -> "boolean"
-        TypeKind.DECLARED -> {
-            val typeElement = (asType() as DeclaredType).asElement() as TypeElement
-            typeElement.simpleName.toString()
-        }
-        else -> throw InvalidElementException(typeKind.toString() + " is not known, bug?", this)
-    }
-}
-
-fun TypeElement.getPackageName(): String {
+val TypeElement.packageName: String get() {
     return qualifiedName.substring(0, qualifiedName.lastIndexOf("."))
 }
 
-fun <T : Annotation> TypeElement.isAnnotatedWith(annotationClass: Class<T>): Boolean {
-    return getAnnotation(annotationClass) != null
+data class AnnotationType<T : Annotation>(val type: KClass<T>)
+
+inline fun <reified  T : Annotation> annotation() = AnnotationType(T::class)
+
+fun Element.isAnnotatedWithAnyOf(vararg annotations: AnnotationType<*>) = annotations.any {
+    getAnnotation(it.type.java) != null
 }
+
+inline fun <reified T : Annotation>Element.isAnnotatedWith() = getAnnotation(T::class.java) != null
+
+inline fun <reified T> Element.getAnnotationAttribute(attributeName: String): TypeMirror? {
+    return annotationMirrors.firstOrNull { it.annotationType.toString() == T::class.java.name }
+            ?.elementValues?.entries?.filter { it.key.simpleName.toString() == attributeName }
+            ?.map { it.value.value as TypeMirror}
+            ?.firstOrNull()
+}
+

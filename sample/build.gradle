@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 27
@@ -17,6 +18,7 @@ android {
 
 dependencies {
     implementation project(':android')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     annotationProcessor project(':compiler')
 
     testImplementation 'org.mockito:mockito-core:2.8.9'

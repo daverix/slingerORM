@@ -28,7 +28,8 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     val tableName: String
         @Throws(InvalidElementException::class)
         get() {
-            val annotation = databaseTypeElement.getAnnotation(DatabaseEntity::class.java) ?: throw InvalidElementException("element not annotated with @DatabaseEntity", databaseTypeElement)
+            val annotation = databaseTypeElement.getAnnotation(DatabaseEntity::class.java)
+                    ?: throw InvalidElementException("element $databaseTypeElement not annotated with @DatabaseEntity", databaseTypeElement)
 
             val tableName = annotation.name
             return if (tableName == "") databaseTypeElement.simpleName.toString() else tableName
@@ -38,108 +39,49 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     val fieldNames: Array<String>
         @Throws(InvalidElementException::class)
         get() {
-            return fieldsUsedInDatabase.map { it.getDatabaseFieldName() }.toTypedArray()
+            return fieldsUsedInDatabase.map { getDatabaseFieldName(it) }.toTypedArray()
         }
 
-    private val fieldsUsedInDatabase: List<Element>
+    val fieldsUsedInDatabase: List<Element>
         @Throws(InvalidElementException::class)
-        get() = databaseTypeElement.getElements().filter { it.isDatabaseField() }
+        get() = databaseTypeElement.elements.filter { it.isDatabaseField() }
 
     @Throws(InvalidElementException::class)
     private fun List<Element>.getDatabaseFieldNames(): List<String> {
-        return map { it.getDatabaseFieldName() }
+        return map { getDatabaseFieldName(it) }
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.getDatabaseFieldName(): String {
-        val fieldNameAnnotation = getAnnotation(FieldName::class.java) ?: return simpleName.toString()
+    fun getDatabaseFieldName(element: Element): String {
+        val fieldNameAnnotation = element.getAnnotation(FieldName::class.java)
+                ?: return element.simpleName.toString()
 
         val fieldName = fieldNameAnnotation.value
         if (fieldName == "")
-            throw InvalidElementException("fieldName must not be null or empty!", this)
+            throw InvalidElementException("fieldName must not be null or empty!", element)
 
         return fieldName
     }
 
-    @Throws(InvalidElementException::class)
-    fun createTableSql(): String {
-        val fields = fieldsUsedInDatabase
-        if (fields.isEmpty())
-            throw InvalidElementException("no fields found in " + databaseTypeElement.simpleName, databaseTypeElement)
+    val primaryKeyFieldNames: Set<String> by lazy {
+        val entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity::class.java)
+        val annotationKeys = entityAnnotation.primaryKeyFields
+                .filter { x -> !x.isEmpty() }
+                .toSet()
 
-        val builder = StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName).append("(")
-
-        val dbFieldNames = HashMap<String, String>()
-        val fieldTypes = HashMap<String, String>()
-        for (i in fields.indices) {
-            val field = fields[i]
-            val simpleName = field.simpleName.toString()
-            dbFieldNames.put(simpleName, field.getDatabaseFieldName())
-            fieldTypes.put(simpleName, field.getDatabaseType())
-        }
-
-        val primaryKeysCollection = primaryKeyFieldNames
-
-        if (primaryKeysCollection.isEmpty())
-            throw InvalidElementException("Primary key not found when creating SQL for entity " + databaseTypeElement.simpleName, databaseTypeElement)
-
-        val primaryKeysCollectionSize = primaryKeysCollection.size
-        for (i in fields.indices) {
-            val field = fields[i]
-            val fieldName = field.simpleName.toString()
-
-            builder.append(dbFieldNames[fieldName])
-                    .append(" ")
-                    .append(fieldTypes[fieldName])
-
-            val containsFieldName = primaryKeysCollection.contains(fieldName)
-
-            if (primaryKeysCollectionSize == 1 && containsFieldName) {
-                builder.append(" NOT NULL PRIMARY KEY")
-            } else if (containsFieldName) {
-                builder.append(" NOT NULL")
-            }
-
-            if (i < fields.size - 1) {
-                builder.append(", ")
-            }
-        }
-
-        if (primaryKeysCollectionSize > 1) {
-            val dbNames = primaryKeysCollection.map { dbFieldNames[it] }
-
-            builder.append(", PRIMARY KEY(")
-                    .append(dbNames.joinToString(","))
-                    .append(")")
-        }
-
-        builder.append(")")
-
-        return builder.toString()
-    }
-
-    private val primaryKeyFieldNames: Set<String>
-        @Throws(InvalidElementException::class)
-        get() {
-            val entityAnnotation = databaseTypeElement.getAnnotation(DatabaseEntity::class.java)
-            val primaryKeys = entityAnnotation.primaryKeyFields
-            val annotationKeys = primaryKeys
+        if (annotationKeys.isNotEmpty()) {
+            annotationKeys
+        } else {
+            primaryKeyFields
+                    .map { it.simpleName.toString() }
                     .filter { x -> !x.isEmpty() }
                     .toSet()
-
-            return if (annotationKeys.isNotEmpty()) {
-                annotationKeys
-            } else {
-                primaryKeyFields
-                        .map { it.simpleName.toString() }
-                        .filter { x -> !x.isEmpty() }
-                        .toSet()
-            }
         }
+    }
 
-    private val primaryKeyDbNames: List<String>
-        @Throws(InvalidElementException::class)
-        get() = primaryKeyFields.getDatabaseFieldNames()
+    private val primaryKeyDbNames: List<String> by lazy {
+        primaryKeyFields.getDatabaseFieldNames()
+    }
 
     private val primaryKeyFields: List<Element>
         @Throws(InvalidElementException::class)
@@ -165,7 +107,8 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
 
         val elements = ArrayList<Element>()
         for (key in keys) {
-            val field = getFieldByName(key) ?: throw InvalidElementException("Field specified in DatabaseEntity annotation doesn't exist in entity class!", databaseTypeElement)
+            val field = getFieldByName(key)
+                    ?: throw InvalidElementException("Field specified in DatabaseEntity annotation doesn't exist in entity class!", databaseTypeElement)
 
             elements.add(field)
         }
@@ -177,45 +120,45 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
         if (kind != ElementKind.FIELD)
             return false
 
-        return !modifiers.contains(Modifier.STATIC) &&
-                !modifiers.contains(Modifier.TRANSIENT) &&
-                getAnnotation(IgnoreField::class.java) == null
+        return Modifier.STATIC !in modifiers &&
+                Modifier.TRANSIENT !in modifiers &&
+                !isAnnotatedWith<IgnoreField>()
     }
 
+    private val SerializeType.databaseType: String
+        get() = when (this) {
+            SerializeType.SHORT, SerializeType.INT, SerializeType.LONG -> "INTEGER"
+            SerializeType.FLOAT, SerializeType.DOUBLE -> "REAL"
+            SerializeType.BYTE_ARRAY -> "BLOB"
+            else -> "TEXT"
+        }
+
     @Throws(InvalidElementException::class)
-    private fun Element.getDatabaseType(): String {
-        val fieldType = asType()
+    fun getDatabaseType(element: Element): String {
+        val fieldType = element.asType()
         val typeKind = fieldType.kind
         when (typeKind) {
-            TypeKind.BOOLEAN -> return SerializeType.INT.getDatabaseType()
-            TypeKind.SHORT -> return SerializeType.SHORT.getDatabaseType()
-            TypeKind.LONG -> return SerializeType.LONG.getDatabaseType()
-            TypeKind.INT -> return SerializeType.INT.getDatabaseType()
-            TypeKind.FLOAT -> return SerializeType.FLOAT.getDatabaseType()
-            TypeKind.DOUBLE -> return SerializeType.DOUBLE.getDatabaseType()
+            TypeKind.BOOLEAN -> return SerializeType.INT.databaseType
+            TypeKind.SHORT -> return SerializeType.SHORT.databaseType
+            TypeKind.LONG -> return SerializeType.LONG.databaseType
+            TypeKind.INT -> return SerializeType.INT.databaseType
+            TypeKind.FLOAT -> return SerializeType.FLOAT.databaseType
+            TypeKind.DOUBLE -> return SerializeType.DOUBLE.databaseType
             TypeKind.DECLARED -> {
                 val declaredType = fieldType as DeclaredType
                 val typeElement = declaredType.asElement() as TypeElement
                 val typeName = typeElement.qualifiedName.toString()
 
                 return if (typeElement.isString()) {
-                    SerializeType.STRING.getDatabaseType()
+                    SerializeType.STRING.databaseType
                 } else {
-                    val annotation = getAnnotation(SerializeTo::class.java) ?: throw InvalidElementException(typeName + " is not a type that SlingerORM understands, please add @SerializeTo and tell it what to serialize to.", this)
+                    val annotation = element.getAnnotation(SerializeTo::class.java)
+                            ?: throw InvalidElementException("$typeName is not a type that SlingerORM understands, please add @SerializeTo and tell it what to serialize to.", element)
 
-                    annotation.value.getDatabaseType()
+                    annotation.value.databaseType
                 }
             }
-            else -> throw InvalidElementException(simpleName.toString() + " have a type not known by SlingerORM, solve this by creating a custom serializer", this)
-        }
-    }
-
-    private fun SerializeType.getDatabaseType(): String {
-        return when (this) {
-            SerializeType.SHORT, SerializeType.INT, SerializeType.LONG -> "INTEGER"
-            SerializeType.FLOAT, SerializeType.DOUBLE -> "REAL"
-            SerializeType.BYTE_ARRAY -> "BLOB"
-            else -> "TEXT"
+            else -> throw InvalidElementException(element.simpleName.toString() + " have a type not known by SlingerORM, solve this by creating a custom serializer", element)
         }
     }
 
@@ -228,11 +171,11 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
 
     @Throws(InvalidElementException::class)
     private fun List<Element>.getFieldByName(name: String): Element? {
-        return filter { item -> name == item.simpleName.toString() }.firstOrNull()
+        return firstOrNull { item -> name == item.simpleName.toString() }
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.findGetter(): FieldMethod {
+    private fun Element.findGetter(variableName: String): String {
         val objectType = getObjectTypeForElement()
         return when (objectType) {
             ObjectType.BOOLEAN,
@@ -241,21 +184,21 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
             ObjectType.INT,
             ObjectType.LONG,
             ObjectType.SHORT,
-            ObjectType.STRING -> findDirectGetter()
-            ObjectType.OTHER -> getSerializerMethod()
+            ObjectType.STRING -> findDirectGetter(variableName)
+            ObjectType.OTHER -> getSerializerMethod(variableName)
         }
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.getSerializerMethod(): FieldMethod {
+    private fun Element.getSerializerMethod(variableName: String): String {
         val serializerFieldName = getSerializerFieldName()
-        val getter = findDirectGetter()
-        return WrappedFieldMethod(serializerFieldName + ".serialize(", getter, ")")
+        val getter = findDirectGetter(variableName)
+        return "$serializerFieldName.serialize($getter)"
     }
 
     @Throws(InvalidElementException::class)
     private fun Element.getSerializerFieldName(): String {
-        val typeElement = asElement()
+        val typeElement = asTypeElement()
         val fieldTypeName = typeElement.simpleName.toString()
         val firstLowerCase = fieldTypeName.substring(0, 1).toLowerCase() + fieldTypeName.substring(1)
 
@@ -276,32 +219,34 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.findDirectGetter(): FieldMethod {
-        val methodsInDatabaseEntityElement = databaseTypeElement.getMethods()
+    private fun Element.findDirectGetter(variableName: String): String {
+        val methodsInDatabaseEntityElement = databaseTypeElement.methods
         var method = findMethodByFieldNameAndGetFieldAnnotation(methodsInDatabaseEntityElement, simpleName.toString())
         if (method != null)
-            return FieldMethodImpl("item." + method.simpleName + "()")
+            return "$variableName.${method.simpleName}()"
 
         val isBoolean = asType().kind == TypeKind.BOOLEAN
-        method = methodsInDatabaseEntityElement.firstByFieldName(simpleName.toString(), if (isBoolean) "is" else "get")
-        if (method != null)
-            return FieldMethodImpl("item." + method.simpleName + "()")
+        method = methodsInDatabaseEntityElement.firstByFieldName(simpleName.toString(),
+                if (isBoolean) "is" else "get")
 
-        if (!isAccessible())
-            throw InvalidElementException("No get method or a public field for " + simpleName + " in " + databaseTypeElement.simpleName,
+        if (method != null)
+            return "$variableName.${method.simpleName}()"
+
+        if (!isAccessible)
+            throw InvalidElementException("No get method or a public field for $simpleName in ${databaseTypeElement.simpleName}",
                     databaseTypeElement)
 
-        return FieldMethodImpl("item." + simpleName.toString())
+        return "$variableName.$simpleName"
     }
 
     @Throws(InvalidElementException::class)
     private fun List<ExecutableElement>.firstByFieldName(fieldName: String, prefix: String): ExecutableElement? {
-        return filter { item ->
+        return firstOrNull { item ->
             val firstLetter = fieldName.substring(0, 1).toUpperCase()
             val methodName = prefix + firstLetter + fieldName.substring(1)
 
             methodName == item.simpleName.toString()
-        }.firstOrNull()
+        }
     }
 
     @Throws(InvalidElementException::class)
@@ -322,7 +267,6 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
 
     @Throws(InvalidElementException::class)
     private fun Element.getObjectTypeForElement(): ObjectType {
-        val typeKind = getTypeKind()
         when (typeKind) {
             TypeKind.BOOLEAN -> return ObjectType.BOOLEAN
             TypeKind.SHORT -> return ObjectType.SHORT
@@ -362,63 +306,63 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.findSetter(): FieldMethod {
-        val methodsInDatabaseEntityElement = databaseTypeElement.getMethods()
+    private fun Element.findSetter(variableName: String, columnIndex: Int): String {
+        val methodsInDatabaseEntityElement = databaseTypeElement.methods
         var method = methodsInDatabaseEntityElement.firstByFieldNameAndSetFieldAnnotation(simpleName.toString())
         if (method != null) {
-            return method.findSetterMethodFromParameter(this)
+            return method.findSetterMethodFromParameter(this, variableName, columnIndex)
         }
 
         method = methodsInDatabaseEntityElement.firstByFieldName(simpleName.toString(), "set")
         if (method != null) {
-            return method.findSetterMethodFromParameter(this)
+            return method.findSetterMethodFromParameter(this, variableName, columnIndex)
         }
 
-        if (!isAccessible())
+        if (!isAccessible)
             throw InvalidElementException("No get method or a public field for " + simpleName + " in " + databaseTypeElement.simpleName, this)
 
-        return WrappedFieldMethod(simpleName.toString() + " = ", findCursorMethod(this), "")
+        return "$simpleName = ${findCursorMethod(this, variableName, columnIndex)}"
     }
 
     @Throws(InvalidElementException::class)
-    private fun ExecutableElement.findSetterMethodFromParameter(field: Element): FieldMethod {
+    private fun ExecutableElement.findSetterMethodFromParameter(field: Element, variableName: String, columnIndex: Int): String {
         if (parameters.size != 1)
             throw InvalidElementException("method has ${parameters.size} parameters, only 1 parameter supported!", this)
 
-        return WrappedFieldMethod(simpleName.toString() + "(", parameters[0].findCursorMethod(field), ")")
+        return "$simpleName(${parameters[0].findCursorMethod(field, variableName, columnIndex)})"
     }
 
     @Throws(InvalidElementException::class)
-    private fun Element.findCursorMethod(field: Element): FieldMethod {
+    private fun Element.findCursorMethod(field: Element, variableName: String, columnIndex: Int): String {
         val objectType = getObjectTypeForElement()
         return if (objectType == ObjectType.OTHER) {
-            findDeserializerMethod(this, field)
+            findDeserializerMethod(field, variableName, columnIndex)
         } else {
-            getCursorMethod(field, objectType)
+            getCursorMethod(objectType, variableName, columnIndex)
         }
     }
 
     @Throws(InvalidElementException::class)
-    private fun getCursorMethod(field: Element, objectType: ObjectType): FieldMethod {
+    private fun getCursorMethod(objectType: ObjectType, variableName: String, columnIndex: Int): String {
         return when (objectType) {
-            ObjectType.BOOLEAN -> FieldMethodImpl("cursor.getInt(" + getColumnIndex(field) + ") == 1")
-            ObjectType.DOUBLE -> FieldMethodImpl("cursor.getDouble(" + getColumnIndex(field) + ")")
-            ObjectType.FLOAT -> FieldMethodImpl("cursor.getFloat(" + getColumnIndex(field) + ")")
-            ObjectType.INT -> FieldMethodImpl("cursor.getInt(" + getColumnIndex(field) + ")")
-            ObjectType.LONG -> FieldMethodImpl("cursor.getLong(" + getColumnIndex(field) + ")")
-            ObjectType.SHORT -> FieldMethodImpl("cursor.getShort(" + getColumnIndex(field) + ")")
-            ObjectType.STRING -> FieldMethodImpl("cursor.getString(" + getColumnIndex(field) + ")")
+            ObjectType.BOOLEAN -> "$variableName.getInt($columnIndex) == 1"
+            ObjectType.DOUBLE -> "$variableName.getDouble($columnIndex)"
+            ObjectType.FLOAT -> "$variableName.getFloat($columnIndex)"
+            ObjectType.INT -> "$variableName.getInt($columnIndex)"
+            ObjectType.LONG -> "$variableName.getLong($columnIndex)"
+            ObjectType.SHORT -> "$variableName.getShort($columnIndex)"
+            ObjectType.STRING -> "$variableName.getString($columnIndex)"
             else -> throw UnsupportedOperationException("this should not be called!")
         }
     }
 
     @Throws(InvalidElementException::class)
-    private fun findDeserializerMethod(element: Element, field: Element): FieldMethod {
+    private fun findDeserializerMethod(field: Element, variableName: String, columnIndex: Int): String {
         val serializerFieldName = field.getSerializerFieldName()
         val annotation = field.getAnnotation(SerializeTo::class.java)
-        val cursorMethod = getCursorMethod(element, annotation.value.asObjectType())
+        val cursorMethod = getCursorMethod(annotation.value.asObjectType(), variableName, columnIndex)
 
-        return WrappedFieldMethod(serializerFieldName + ".deserialize(", cursorMethod, ")")
+        return "$serializerFieldName.deserialize($cursorMethod)"
     }
 
     private fun SerializeType.asObjectType(): ObjectType {
@@ -433,24 +377,15 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
         }
     }
 
-    @Throws(InvalidElementException::class)
-    private fun getColumnIndex(field: Element): String {
-        return "cursor.getColumnIndex(\"${field.getDatabaseFieldName()}\")"
-    }
+    fun getSetters(variableName: String): List<String> =
+            fieldsUsedInDatabase.mapIndexed { columnIndex, element -> element.findSetter(variableName, columnIndex) }
 
-    val setters: List<FieldMethod>
-        @Throws(InvalidElementException::class)
-        get() = fieldsUsedInDatabase.map { it.findSetter() }
-
-    val getters: List<FieldMethod>
-        @Throws(InvalidElementException::class)
-        get() = fieldsUsedInDatabase.map { createGetter(it) }
+    fun getGetters(variableName: String): List<String> =
+            fieldsUsedInDatabase.map { createGetter(it, variableName) }
 
     @Throws(InvalidElementException::class)
-    private fun createGetter(field: Element?): FieldMethod {
-        if (field == null) throw IllegalArgumentException("field is null")
-
-        return WrappedFieldMethod("\"${field.getDatabaseFieldName()}\", ", field.findGetter(), "")
+    private fun createGetter(field: Element, variableName: String): String {
+        return "\"${getDatabaseFieldName(field)}\", ${field.findGetter(variableName)}"
     }
 
     val itemSql: String
@@ -461,16 +396,9 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
                 .reduce { a, b -> "$a AND $b" }
                 .orElse("")
 
-    val itemSqlArgs: List<String>
-        @Throws(InvalidElementException::class)
-        get() = primaryKeyFields.map {
-            val directGetter = it.findDirectGetter()
-            if (it.isString()) {
-                return@map directGetter.method
-            } else {
-                return@map "String.valueOf(${directGetter.method})"
-            }
-        }
+    fun getItemSqlArgs(variableName: String): List<String> = primaryKeyFields.map {
+        it.findDirectGetter(variableName).encloseStringValueOfIfNotString(it.isString())
+    }
 
     val serializers: List<SerializerType>
         @Throws(InvalidElementException::class)
@@ -493,7 +421,6 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
         val imports = ArrayList<String>()
         imports.add("net.daverix.slingerorm.serializer.Serializer")
 
-        val typeKind = getTypeKind()
         if (typeKind == TypeKind.DECLARED) {
             val declaredType = asType() as DeclaredType
             val typeElement = declaredType.asElement() as TypeElement
@@ -503,7 +430,6 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
     }
 
     private fun Element.getFieldTypeName(): String {
-        val typeKind = getTypeKind()
         return when (typeKind) {
             TypeKind.DECLARED -> {
                 val declaredType = asType() as DeclaredType
@@ -541,14 +467,4 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
             else -> throw IllegalStateException(toString() + " should never been reached, processor error?")
         }
     }
-
-    private inner class WrappedFieldMethod internal constructor(private val prefix: String,
-                                                                private val fieldMethod: FieldMethod,
-                                                                private val suffix: String) : FieldMethod {
-
-        override val method: String
-            get() = prefix + fieldMethod.method + suffix
-    }
-
-    private inner class FieldMethodImpl internal constructor(override val method: String) : FieldMethod
 }

@@ -3,65 +3,72 @@ package net.daverix.slingerorm.android;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.google.common.truth.FailureStrategy;
+import com.google.common.truth.FailureMetadata;
 import com.google.common.truth.Subject;
-import com.google.common.truth.SubjectFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.google.common.truth.Truth.assertAbout;
 
 public class SqliteDatabaseSubject extends Subject<SqliteDatabaseSubject, SQLiteDatabase> {
-    private static final SubjectFactory<SqliteDatabaseSubject, SQLiteDatabase> DATABASE_SUBJECT = new SubjectFactory<SqliteDatabaseSubject, SQLiteDatabase>() {
-        @Override
-        public SqliteDatabaseSubject getSubject(FailureStrategy fs, SQLiteDatabase that) {
-            return new SqliteDatabaseSubject(fs, that);
-        }
-    };
-
-    private SqliteDatabaseSubject(FailureStrategy failureStrategy, SQLiteDatabase subject) {
-        super(failureStrategy, subject);
+    private SqliteDatabaseSubject(FailureMetadata failureMetadata, SQLiteDatabase actual) {
+        super(failureMetadata, actual);
     }
 
     public static SqliteDatabaseSubject assertThat(SQLiteDatabase db) {
-        return assertAbout(DATABASE_SUBJECT).that(db);
+        return assertAbout(SqliteDatabaseSubject::new).that(db);
     }
 
     public DatabaseTableSubject withTable(String table) {
-        return new DatabaseTableSubject(failureStrategy, table, getSubject());
+        return check()
+                .about((FailureMetadata failureMetadata, String actual) -> new DatabaseTableSubject(failureMetadata, actual, actual()))
+                .that(table);
     }
 
-    public static class DatabaseTableSubject extends Subject<DatabaseTableSubject,String> {
+    public static class DatabaseTableSubject extends Subject<DatabaseTableSubject, String> {
         private final SQLiteDatabase database;
 
-        public DatabaseTableSubject(FailureStrategy failureStrategy, String subject, SQLiteDatabase database) {
-            super(failureStrategy, subject);
+        DatabaseTableSubject(FailureMetadata failureMetadata, String subject, SQLiteDatabase database) {
+            super(failureMetadata, subject);
 
             this.database = database;
         }
 
         public void isEmpty() {
-            Cursor cursor = null;
-            try {
-                cursor = database.query(false, getSubject(), null, null, null, null, null, null, null);
-
-                if(cursor.getCount() > 0) {
-                    fail(String.format("is not empty (got %d items)", cursor.getCount()));
-                }
-            } finally {
-                if(cursor != null) cursor.close();
+            int count = countRows();
+            if (count > 0) {
+                fail("is empty", count);
             }
-
         }
 
         public void isNotEmpty() {
-            Cursor cursor = null;
-            try {
-                cursor = database.query(false, getSubject(), null, null, null, null, null, null, null);
+            int count = countRows();
+            if (count == 0) {
+                fail("is not empty");
+            }
+        }
 
-                if(cursor.getCount() == 0) {
-                    fail("is empty");
+        public void hasPrimaryKey(String... keys) {
+            check().that(getPrimaryKeys()).containsExactly((Object[]) keys);
+        }
+
+        private List<String> getPrimaryKeys() {
+            try (Cursor cursor = database.rawQuery(String.format("PRAGMA table_info('%s')", actual()), null)) {
+                List<String> columns = new ArrayList<>();
+                while (cursor.moveToNext()) {
+                    int pk = cursor.getInt(cursor.getColumnIndex("pk"));
+                    if(pk > 0) {
+                        columns.add(cursor.getString(cursor.getColumnIndex("name")));
+                    }
                 }
-            } finally {
-                if(cursor != null) cursor.close();
+                return columns;
+            }
+        }
+
+        private int countRows() {
+            try (Cursor cursor = database.rawQuery(String.format("SELECT count(*) FROM %s", actual()), null)) {
+                return cursor.moveToFirst() ? cursor.getInt(0) : 0;
             }
         }
     }
