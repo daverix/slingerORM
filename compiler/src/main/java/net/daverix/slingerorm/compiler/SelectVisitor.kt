@@ -1,7 +1,6 @@
 package net.daverix.slingerorm.compiler
 
 import com.squareup.javapoet.MethodSpec
-import net.daverix.slingerorm.DataPointer
 import net.daverix.slingerorm.entity.DatabaseEntity
 import net.daverix.slingerorm.storage.Select
 import javax.lang.model.element.ExecutableElement
@@ -40,10 +39,10 @@ class SelectVisitor(private val typeElement: TypeElement,
                         val model = dbEntities[returnTypeElement]
                         val fields = model.fieldNames.joinToString(",\n") { "    \"$it\"" }
 
-                        addCode("\$T pointer = db.query(false,\n", DataPointer::class.java)
+                        addCode("\$T cursor = db.query(false,\n", ClassNames.CURSOR)
                         addCode("  \"${model.tableName}\",\n")
                         addCode("  new String[] {\n")
-                        addCode(fields)
+                        addCode("$fields\n")
                         addCode("  },\n")
                         addCode("  \"${model.itemSql}\",\n")
                         addCode("  new String[] {\n")
@@ -56,15 +55,15 @@ class SelectVisitor(private val typeElement: TypeElement,
                         addCode("\n")
 
                         tryFinally({
-                            beginControlFlow("if(pointer.moveToFirst())")
-                                addStatement("\$T entity = new \$T()", returnTypeElement.asType(), returnTypeElement.asType())
-                                addSetterStatements(model, "entity", "pointer")
+                            beginControlFlow("if(cursor.moveToFirst())")
+                                addStatement("\$1T entity = new \$1T()", returnTypeElement.asType())
+                                addSetterStatements(model, "entity", "cursor")
                                 addStatement("return entity")
                             nextControlFlow("else")
                                 addStatement("return null")
                             endControlFlow()
                         }, {
-                            addStatement("pointer.close()")
+                            addStatement("cursor.close()")
                         })
                     }
                     .build()
@@ -73,8 +72,8 @@ class SelectVisitor(private val typeElement: TypeElement,
 
     private fun MethodSpec.Builder.addSetterStatements(model: DatabaseEntityModel,
                                                        entityVariableName: String,
-                                                       pointerVariableName: String) {
-        for (setter in model.getSetters(pointerVariableName)) {
+                                                       cursorVariableName: String) {
+        for (setter in model.getSetters(cursorVariableName)) {
             addStatement("$entityVariableName.$setter")
         }
     }

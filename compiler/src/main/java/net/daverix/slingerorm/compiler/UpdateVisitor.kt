@@ -3,6 +3,7 @@ package net.daverix.slingerorm.compiler
 import com.squareup.javapoet.MethodSpec
 import net.daverix.slingerorm.entity.DatabaseEntity
 import net.daverix.slingerorm.storage.Update
+import java.lang.IllegalArgumentException
 import javax.lang.model.element.TypeElement
 
 
@@ -29,13 +30,21 @@ class UpdateVisitor(private val typeElement: TypeElement,
 
             MethodSpec.overriding(it)
                     .apply {
-                        addCode("db.edit(\"${model.tableName}\")\n")
-                        for(getter in model.getGetters(firstParameter.simpleName.toString())) {
-                            addCode("  .put($getter)\n")
+                        beginControlFlow("if (${firstParameter.simpleName} == null)")
+                                .addStatement("throw new \$T(\$S)",
+                                        IllegalArgumentException::class.java,
+                                        "${firstParameter.simpleName} is null")
+                                .endControlFlow()
+
+                        addCode("\$1T values = new \$1T();\n", ClassNames.CONTENT_VALUES)
+
+                        for (getter in model.getGetters(firstParameter.simpleName.toString())) {
+                            addCode("values.put($getter);\n")
                         }
-                        addCode("  .update(\"${model.itemSql}\", new String[] {\n" +
-                                model.getItemSqlArgs(firstParameter.simpleName.toString()).joinToString(","){"    $it\n"} +
-                                "  });\n")
+
+                        addCode("db.update(\"${model.tableName}\", values, \"${model.itemSql}\", new String[] {\n" +
+                                model.getItemSqlArgs(firstParameter.simpleName.toString()).joinToString(","){"  $it\n"} +
+                                "});\n")
                     }
                     .build()
         }.toList()

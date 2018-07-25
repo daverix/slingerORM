@@ -3,6 +3,7 @@ package net.daverix.slingerorm.compiler
 import com.squareup.javapoet.MethodSpec
 import net.daverix.slingerorm.entity.DatabaseEntity
 import net.daverix.slingerorm.storage.Replace
+import java.lang.IllegalArgumentException
 import javax.lang.model.element.TypeElement
 
 
@@ -29,13 +30,18 @@ class ReplaceVisitor(private val typeElement: TypeElement,
 
             MethodSpec.overriding(it)
                     .apply {
-                        addStatement("if (${firstParameter.simpleName} == null) throw new \$T(\"${firstParameter.simpleName} is null\")", IllegalArgumentException::class.java)
-                        addCode("db.edit(\"${model.tableName}\")\n")
+                        beginControlFlow("if (${firstParameter.simpleName} == null)")
+                                .addStatement("throw new \$T(\$S)",
+                                        IllegalArgumentException::class.java,
+                                        "${firstParameter.simpleName} is null")
+                                .endControlFlow()
 
-                        for(getter in model.getGetters(firstParameter.simpleName.toString())) {
-                            addCode("  .put($getter)\n")
+                        addCode("\$1T values = new \$1T();\n", ClassNames.CONTENT_VALUES)
+
+                        for (getter in model.getGetters(firstParameter.simpleName.toString())) {
+                            addCode("values.put($getter);\n")
                         }
-                        addCode("  .replace();\n")
+                        addCode("db.replaceOrThrow(\"${model.tableName}\", null, values);\n")
                     }
                     .build()
         }.toList()

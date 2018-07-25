@@ -1,7 +1,6 @@
 package net.daverix.slingerorm.compiler
 
 import com.squareup.javapoet.*
-import net.daverix.slingerorm.Database
 import java.lang.IllegalArgumentException
 import javax.lang.model.element.Modifier
 
@@ -37,7 +36,9 @@ class DatabaseStorageBuilder internal constructor(private val packageName: Strin
         val builderClassName = ClassName.get(packageName, implementationName,"Builder")
 
         val databaseFieldName = "db"
-        val databaseField = createDatabaseField(databaseFieldName)
+        val databaseField = FieldSpec.builder(ClassNames.SQLITE_DATABASE, databaseFieldName)
+                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
+                .build()
 
         val constructor = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PRIVATE)
@@ -51,7 +52,9 @@ class DatabaseStorageBuilder internal constructor(private val packageName: Strin
                 .addStatement("return new \$T()", builderClassName)
                 .build()
 
-        val storageBuilderClass = createStorageBuilderClass(builderClassName, storageClassName)
+        val storageBuilderClass = createStorageBuilderClass(builderClassName,
+                storageClassName,
+                databaseFieldName)
 
         return TypeSpec.classBuilder(storageClassName)
                 .addModifiers(Modifier.PUBLIC)
@@ -66,9 +69,9 @@ class DatabaseStorageBuilder internal constructor(private val packageName: Strin
     }
 
     private fun createStorageBuilderClass(builderClassName: ClassName,
-                                          storageClassName: ClassName): TypeSpec {
-        val databaseFieldName = "db"
-        val databaseField = FieldSpec.builder(Database::class.java, databaseFieldName)
+                                          storageClassName: ClassName,
+                                          databaseFieldName: String): TypeSpec {
+        val databaseField = FieldSpec.builder(ClassNames.SQLITE_DATABASE, databaseFieldName)
                 .addModifiers(Modifier.PRIVATE)
                 .build()
 
@@ -77,9 +80,9 @@ class DatabaseStorageBuilder internal constructor(private val packageName: Strin
                 .build()
 
         val databaseMethod = createSetterMethod("database",
-                "db",
-                "db",
-                ClassName.get(Database::class.java),
+                databaseFieldName,
+                databaseFieldName,
+                ClassNames.SQLITE_DATABASE,
                 builderClassName)
 
         val buildMethod = MethodSpec.methodBuilder("build")
@@ -95,12 +98,6 @@ class DatabaseStorageBuilder internal constructor(private val packageName: Strin
                 .addMethod(constructor)
                 .addMethod(databaseMethod)
                 .addMethod(buildMethod)
-                .build()
-    }
-
-    private fun createDatabaseField(databaseFieldName: String): FieldSpec? {
-        return FieldSpec.builder(Database::class.java, databaseFieldName)
-                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                 .build()
     }
 
