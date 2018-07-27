@@ -22,8 +22,7 @@ inline fun MethodSpec.Builder.tryFinally(tryBlock: MethodSpec.Builder.() -> Unit
 
 fun MethodSpec.Builder.addVariableArrayCode(variableElements: List<VariableElement>, indent: String="") {
     variableElements.forEachIndexed { index, paramElement ->
-        val paramName = paramElement.simpleName.toString()
-                .encloseStringValueOfIfNotString(paramElement.isString())
+        val paramName = paramElement.getParameterVariable()
 
         addCode("$indent$paramName")
         if(index < variableElements.size - 1)

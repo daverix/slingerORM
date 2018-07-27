@@ -149,7 +149,7 @@ class DatabaseEntityModel(private val databaseTypeElement: TypeElement) {
                 val typeElement = declaredType.asElement() as TypeElement
                 val typeName = typeElement.qualifiedName.toString()
 
-                return if (typeElement.isString()) {
+                return if (typeName == TYPE_STRING) {
                     SerializeType.STRING.databaseType
                 } else {
                     val annotation = element.getAnnotation(SerializeTo::class.java)

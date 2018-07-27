@@ -8,7 +8,10 @@ fun String.countSqliteArgs(): Int {
 }
 
 fun String.encloseStringValueOfIfNotString(isString: Boolean): String =
-        if (isString) this else "String.valueOf(${this})"
+        when {
+            isString -> this
+            else -> "String.valueOf(${this})"
+        }
 
 fun String.fromCamelCaseToScreamingSnakeCase(): String {
     val builder = StringBuilder()
